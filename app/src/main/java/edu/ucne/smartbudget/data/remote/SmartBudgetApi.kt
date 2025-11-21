@@ -11,10 +11,10 @@ import retrofit2.http.Path
 interface SmartBudgetApi {
 
     @GET("api/Usuarios")
-    suspend fun getUsuarios(): List<UsuariosDto>
+    suspend fun getUsuarios(): Response<List<UsuariosDto>>
 
     @GET ("api/Usuarios/{id}")
-    suspend fun getUsuario(@Path("id") id: Int): UsuariosDto?
+    suspend fun getUsuario(@Path("id") id: Int): Response<UsuariosDto?>
 
     @PUT ("api/Usuarios/{id}")
     suspend fun updateUsuario(@Path("id") id: Int, @Body usuarios: UsuariosDto ): Response<Unit>
