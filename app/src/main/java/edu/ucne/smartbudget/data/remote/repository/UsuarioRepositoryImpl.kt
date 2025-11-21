@@ -9,7 +9,6 @@ import edu.ucne.smartbudget.domain.repository.UsuarioRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
-
 class UsuarioRepositoryImpl @Inject constructor(
     private val api: UsuariosRemoteDataSource
 ) : UsuarioRepository {
@@ -22,19 +21,34 @@ class UsuarioRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getUsuario(id: Int): Usuarios? {
+    override suspend fun getUsuario(id: Int): Resource<Usuarios?> {
         return when (val res = api.getUsuario(id)) {
-            is Resource.Success -> res.data?.toDomain()
-            else -> null
+            is Resource.Success -> Resource.Success(res.data?.toDomain())
+            is Resource.Error -> Resource.Error(res.message ?: "Error")
+            is Resource.Loading -> Resource.Loading()
         }
     }
 
-    override suspend fun insertUsuario(usuario: Usuarios) {
-        api.createUsuario(usuario.toDto())
+    override suspend fun insertUsuario(usuario: Usuarios): Resource<Usuarios> {
+        val dto = usuario.toDto()
+        return when (val res = api.createUsuario(dto)) {
+            is Resource.Success -> {
+                val domain = res.data?.toDomain()
+                if (domain != null) Resource.Success(domain)
+                else Resource.Error("Error al convertir")
+            }
+            is Resource.Error -> Resource.Error(res.message ?: "Error")
+            is Resource.Loading -> Resource.Loading()
+        }
     }
 
-    override suspend fun updateUsuario(usuario: Usuarios) {
-        val id = usuario.usuarioId ?: return
-        api.updateUsuario(id, usuario.toDto())
+    override suspend fun updateUsuario(usuario: Usuarios): Resource<Unit> {
+        val id = usuario.usuarioId ?: return Resource.Error("usuarioId nulo")
+        val dto = usuario.toDto()
+        return when (val res = api.updateUsuario(id, dto)) {
+            is Resource.Success -> Resource.Success(Unit)
+            is Resource.Error -> Resource.Error(res.message ?: "Error")
+            is Resource.Loading -> Resource.Loading()
+        }
     }
 }

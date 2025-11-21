@@ -18,6 +18,7 @@ data class UsuarioUiState (
     val successLogin: Boolean = false,
     val loginError: String? = null,
     val usuarios: List<Usuarios> = emptyList(),
-    val usuarioActual: Usuarios? = null
+    val usuarioActual: Usuarios? = null,
+    val isLogin: Boolean = true
 
 )

@@ -9,5 +9,6 @@ sealed class UsuarioUiEvent {
     object hideDialog : UsuarioUiEvent()
     object userMessageShown : UsuarioUiEvent()
     data class Login(val userName: String, val password: String) : UsuarioUiEvent()
+    object ToggleLoginMode: UsuarioUiEvent()
 
 }

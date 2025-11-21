@@ -7,26 +7,27 @@ class UsuariosRemoteDataSource @Inject constructor(
     private val api: SmartBudgetApi
 ) {
 
-    suspend fun createUsuario(usuario: UsuariosDto): Resource<UsuariosDto> {
+    suspend fun createUsuario(request: UsuariosDto): Resource<UsuariosDto> {
         return try {
-            val response = api.createUsuario(usuario)
+            val response = api.createUsuario(request)
             if (response.isSuccessful) {
-                Resource.Success(response.body()!!)
+                response.body()?.let { Resource.Success(it) }
+                    ?: Resource.Error("Respuesta vacía del servidor")
             } else {
-                Resource.Error("Error al crear usuario: ${response.code()}")
+                Resource.Error("HTTP ${response.code()} ${response.message()}")
             }
         } catch (e: Exception) {
             Resource.Error(e.localizedMessage ?: "Error de red")
         }
     }
 
-    suspend fun updateUsuario(id: Int, usuario: UsuariosDto): Resource<Unit> {
+    suspend fun updateUsuario(id: Int, request: UsuariosDto): Resource<Unit> {
         return try {
-            val response = api.updateUsuario(id, usuario)
+            val response = api.updateUsuario(id, request)
             if (response.isSuccessful) {
                 Resource.Success(Unit)
             } else {
-                Resource.Error("Error al actualizar usuario: ${response.code()}")
+                Resource.Error("HTTP ${response.code()} ${response.message()}")
             }
         } catch (e: Exception) {
             Resource.Error(e.localizedMessage ?: "Error de red")
@@ -35,8 +36,13 @@ class UsuariosRemoteDataSource @Inject constructor(
 
     suspend fun getUsuarios(): Resource<List<UsuariosDto>> {
         return try {
-            val usuarios = api.getUsuarios()
-            Resource.Success(usuarios)
+            val response = api.getUsuarios()
+            if (response.isSuccessful) {
+                response.body()?.let { Resource.Success(it) }
+                    ?: Resource.Error("Respuesta vacía del servidor")
+            } else {
+                Resource.Error("HTTP ${response.code()} ${response.message()}")
+            }
         } catch (e: Exception) {
             Resource.Error(e.localizedMessage ?: "Error de red")
         }
@@ -44,8 +50,12 @@ class UsuariosRemoteDataSource @Inject constructor(
 
     suspend fun getUsuario(id: Int): Resource<UsuariosDto?> {
         return try {
-            val usuario = api.getUsuario(id)
-            Resource.Success(usuario)
+            val response = api.getUsuario(id)
+            if (response.isSuccessful) {
+                Resource.Success(response.body())
+            } else {
+                Resource.Error("HTTP ${response.code()} ${response.message()}")
+            }
         } catch (e: Exception) {
             Resource.Error(e.localizedMessage ?: "Error de red")
         }
