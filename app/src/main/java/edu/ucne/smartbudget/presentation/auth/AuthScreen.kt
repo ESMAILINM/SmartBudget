@@ -1,6 +1,5 @@
 package edu.ucne.smartbudget.presentation.auth
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -11,7 +10,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import edu.ucne.smartbudget.presentation.Usuarios.UsuarioUiEvent
 import edu.ucne.smartbudget.presentation.Usuarios.UsuarioUiState
-import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -20,7 +18,7 @@ fun AuthScreen(
     onEvent: (UsuarioUiEvent) -> Unit,
     onLoginExitoso: () -> Unit
 ) {
-    var isLogin by remember { mutableStateOf(true) }
+    val isLogin = state.isLogin
 
     LaunchedEffect(state.successLogin) {
         if (state.successLogin) {
@@ -36,6 +34,7 @@ fun AuthScreen(
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+
             Text(
                 text = if (isLogin) "Iniciar Sesión" else "Registro",
                 style = MaterialTheme.typography.headlineMedium
@@ -64,8 +63,10 @@ fun AuthScreen(
 
             Button(
                 onClick = {
-                    if (isLogin) onEvent(UsuarioUiEvent.Login(state.userName, state.password))
-                    else onEvent(UsuarioUiEvent.Save)
+                    if (isLogin)
+                        onEvent(UsuarioUiEvent.Login(state.userName, state.password))
+                    else
+                        onEvent(UsuarioUiEvent.Save)
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -74,12 +75,14 @@ fun AuthScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            TextButton(onClick = { isLogin = !isLogin }) {
-                Text(if (isLogin) "¿No tienes cuenta? Registrarse" else "¿Ya tienes cuenta? Iniciar sesión")
+            TextButton(onClick = {
+                onEvent(UsuarioUiEvent.ToggleLoginMode)   // ⬅️ Nuevo evento
+            }) {
+                Text(if (isLogin) "¿No tienes cuenta? Registrarse"
+                else "¿Ya tienes cuenta? Iniciar sesión")
             }
         }
 
-        // Loading overlay
         if (state.isLoading || state.isSaving) {
             Box(
                 modifier = Modifier
@@ -88,11 +91,9 @@ fun AuthScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    LinearWavyLoadingIndicator(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                    )
+
+                    LinearWavyProgressIndicator()
+
                     Spacer(Modifier.height(12.dp))
                     Text("Por favor espere…")
                 }
@@ -112,29 +113,4 @@ fun AuthScreen(
             )
         }
     }
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-fun LinearWavyLoadingIndicator(
-    modifier: Modifier = Modifier
-) {
-    var progress by remember { mutableFloatStateOf(0.1f) }
-
-    val animatedProgress by animateFloatAsState(
-        targetValue = progress,
-        animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
-    )
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            progress = if (progress >= 1f) 0f else progress + 0.01f
-            delay(16)
-        }
-    }
-
-    LinearWavyProgressIndicator(
-        progress = { animatedProgress },
-        modifier = modifier
-    )
 }
