@@ -9,30 +9,22 @@ import edu.ucne.smartbudget.domain.usecase.GetUsuarioUseCase
 import edu.ucne.smartbudget.domain.usecase.InsertUsuarioUseCase
 import edu.ucne.smartbudget.domain.usecase.ObserveUsuarioUseCase
 import edu.ucne.smartbudget.domain.usecase.UpdateUsuarioUseCase
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
 @HiltViewModel
 class UsuarioViewModel @Inject constructor(
+    private val insertUsuarioUseCase: InsertUsuarioUseCase,
     private val updateUsuarioUseCase: UpdateUsuarioUseCase,
     private val getUsuarioUseCase: GetUsuarioUseCase,
-    private val insertUsuarioUseCase: InsertUsuarioUseCase,
     private val observeUsuarioUseCase: ObserveUsuarioUseCase
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(UsuarioUiState())
+    private val _state = MutableStateFlow(UsuarioUiState(isLoading = true))
     val state: StateFlow<UsuarioUiState> = _state.asStateFlow()
 
-    init { observeUsuarios() }
-
-    private fun observeUsuarios() = viewModelScope.launch {
-        observeUsuarioUseCase().collect { usuarios ->
-            _state.update { it.copy(usuarios = usuarios, isLoading = false) }
-        }
+    init {
+        observeUsuarios()
     }
 
     fun onEvent(event: UsuarioUiEvent) {
@@ -43,11 +35,14 @@ class UsuarioViewModel @Inject constructor(
             is UsuarioUiEvent.passwordChanged ->
                 _state.update { it.copy(password = event.password) }
 
-            is UsuarioUiEvent.Login ->
-                login(event.userName, event.password)
+            is UsuarioUiEvent.load ->
+                loadUsuario(event.usuarioId)
 
             is UsuarioUiEvent.Save ->
                 saveUsuario()
+
+            is UsuarioUiEvent.Login ->
+                login(event.userName, event.password)
 
             is UsuarioUiEvent.showDialog ->
                 _state.update { it.copy(showDialog = true) }
@@ -58,37 +53,49 @@ class UsuarioViewModel @Inject constructor(
             is UsuarioUiEvent.userMessageShown ->
                 clearMessage()
 
-            is UsuarioUiEvent.load -> loadUsuario(event.usuarioId)
-
+            is UsuarioUiEvent.ToggleLoginMode -> {
+                _state.update { current ->
+                    current.copy(isLogin = !current.isLogin)
+                }
+            }
         }
     }
-    private fun loadUsuario(usuarioId: Int) = viewModelScope.launch {
+
+    private fun observeUsuarios() = viewModelScope.launch {
+        observeUsuarioUseCase().collect { usuarios ->
+            _state.update {
+                it.copy(
+                    usuarios = usuarios,
+                    isLoading = false
+                )
+            }
+        }
+    }
+
+    private fun loadUsuario(id: Int) = viewModelScope.launch {
         _state.update { it.copy(isLoading = true) }
-        val res = getUsuarioUseCase(usuarioId)
-        when (res) {
-            is Resource.Success<*> -> {
-                val u = res.data as Usuarios
+
+        when (val result = getUsuarioUseCase(id)) {
+            is Resource.Success -> {
+                val user = result.data!!
                 _state.update {
                     it.copy(
-                        usuarioId = u.usuarioId ?: 0,
-                        userName = u.userName,
-                        password = u.password,
+                        usuarioId = user.usuarioId ?: 0,
+                        userName = user.userName,
+                        password = user.password,
                         isLoading = false
                     )
                 }
             }
-            is Resource.Error<*> -> {
-                _state.update {
-                    it.copy(userMessage = res.message ?: "Error", isLoading = false)
-                }
-            }
+
+            is Resource.Error ->
+                _state.update { it.copy(isLoading = false, userMessage = result.message) }
+
+            else -> {}
         }
     }
 
-
     private fun login(userName: String, password: String) = viewModelScope.launch {
-        _state.update { it.copy(isLoading = true) }
-
         val user = _state.value.usuarios.firstOrNull {
             it.userName == userName && it.password == password
         }
@@ -98,52 +105,50 @@ class UsuarioViewModel @Inject constructor(
                 it.copy(
                     usuarioActual = user,
                     successLogin = true,
-                    isLoading = false,
                     userMessage = "Inicio de sesión exitoso"
                 )
             }
         } else {
             _state.update {
                 it.copy(
-                    isLoading = false,
-                    userMessage = "Usuario o contraseña incorrectos"
+                    loginError = "Usuario o contraseña incorrectos",
+                    successLogin = false
                 )
             }
         }
     }
 
     private fun saveUsuario() = viewModelScope.launch {
-        val current = _state.value
+        val ui = _state.value
+
         val usuario = Usuarios(
-            usuarioId = current.usuarioId,
-            userName = current.userName,
-            password = current.password
+            usuarioId = ui.usuarioId,
+            userName = ui.userName,
+            password = ui.password
         )
 
         _state.update { it.copy(isSaving = true) }
 
         val isNew = (usuario.usuarioId ?: 0) == 0
 
-        val result = try {
-            if (isNew) insertUsuarioUseCase(usuario)
-            else updateUsuarioUseCase(usuario)
-        } catch (e: Exception) {
-            Resource.Error<Usuarios>(e.message ?: "Error desconocido")
-        }
+        val result = if (isNew)
+            insertUsuarioUseCase(usuario)
+        else
+            updateUsuarioUseCase(usuario)
 
         when (result) {
-            is Resource.Loading<*> -> {
-                _state.update { it.copy(isSaving = true) }
-            }
+            is Resource.Success -> {
+                val created = result.data ?: usuario
 
-            is Resource.Success<*> -> {
-                val createdUser = result.data as? Usuarios ?: usuario
                 _state.update {
                     it.copy(
                         isSaving = false,
-                        userMessage = if (isNew) "Usuario registrado correctamente" else "Usuario actualizado",
-                        successLogin = if (isNew) true else it.successLogin,
-                        usuarioActual = if (isNew) createdUser else it.usuarioActual,
+                        userMessage = if (isNew)
+                            "Usuario registrado correctamente"
+                        else
+                            "Usuario actualizado",
+                        usuarioActual = created,
+                        successLogin = isNew || it.successLogin,
                         userName = "",
                         password = "",
                         usuarioId = 0
@@ -151,11 +156,11 @@ class UsuarioViewModel @Inject constructor(
                 }
             }
 
-            is Resource.Error<*> -> {
-                _state.update {
-                    it.copy(isSaving = false, userMessage = result.message)
-                }
-            }
+            is Resource.Error ->
+                _state.update { it.copy(isSaving = false, userMessage = result.message) }
+
+            else -> {}
+
         }
     }
 
