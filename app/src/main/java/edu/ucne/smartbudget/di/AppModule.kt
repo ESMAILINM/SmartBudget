@@ -18,7 +18,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
-    private const val BASE_URL = "https://gestionhuacalesapi.azurewebsites.net/"
+    private const val BASE_URL = "https://smartbudgetapp.azurewebsites.net/"
 
     @Provides
     @Singleton
