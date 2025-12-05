@@ -12,4 +12,7 @@ data class Metas(
     val Imagenes: List<Imagenes>,
     val emoji : String,
     val usuarioId: String,
+    val isPendingCreate: Boolean = false,
+    val isPendingUpdate: Boolean = false,
+    val isPendingDelete: Boolean = false
 )
