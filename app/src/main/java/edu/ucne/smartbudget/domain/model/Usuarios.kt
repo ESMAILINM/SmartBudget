@@ -7,4 +7,7 @@ data class Usuarios (
     val remoteId: Int? = null,
     val userName: String,
     val password: String,
+    val isPendingCreate: Boolean = false,
+    val isPendingUpdate: Boolean = false,
+    val isPendingDelete: Boolean = false
 )
