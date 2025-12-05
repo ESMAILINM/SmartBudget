@@ -6,5 +6,6 @@ data class Imagenes(
     val imagenId: String = UUID.randomUUID().toString(),
     val remoteId: Int? = null,
     val metaId: String,
-    val url: String ,
+    val url: String,
+    val localUrl: String
 )
