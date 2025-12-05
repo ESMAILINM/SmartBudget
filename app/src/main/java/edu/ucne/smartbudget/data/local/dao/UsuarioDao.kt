@@ -16,6 +16,9 @@ interface UsuarioDao {
     @Query("SELECT * FROM usuarios WHERE usuarioId = :id")
     suspend fun getUsuario(id: String): UsuariosEntity?
 
+    @Query("SELECT * FROM usuarios WHERE username = :username LIMIT 1")
+    suspend fun getUsuarioByUsername(username: String): UsuariosEntity?
+
     @Upsert
     suspend fun upsertUsuario(usuario: UsuariosEntity)
 
