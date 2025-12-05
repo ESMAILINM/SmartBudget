@@ -11,7 +11,8 @@ fun CategoriasEntity.toDomain(): Categorias =
         categoriaId = categoriaId,
         remoteId = remoteId,
         nombre = nombre,
-        tipoId = tipoId
+        tipoId = tipoId,
+
     )
 
 fun Categorias.toEntity(): CategoriasEntity =
