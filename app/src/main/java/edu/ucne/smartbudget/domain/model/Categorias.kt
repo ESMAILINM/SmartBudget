@@ -6,5 +6,8 @@ data class Categorias(
     val categoriaId: String = UUID.randomUUID().toString(),
     val remoteId: Int?,
     val nombre: String,
-    val tipoId: Int
+    val tipoId: Int,
+    val isPendingCreate: Boolean = false,
+    val isPendingUpdate: Boolean = false,
+    val isPendingDelete: Boolean = false
 )
