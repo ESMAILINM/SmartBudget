@@ -7,5 +7,8 @@ data class Imagenes(
     val remoteId: Int? = null,
     val metaId: String,
     val url: String,
-    val localUrl: String
+    val localUrl: String,
+    val isPendingCreate: Boolean = false,
+    val isPendingUpdate: Boolean = false,
+    val isPendingDelete: Boolean = false
 )
