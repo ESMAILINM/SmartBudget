@@ -19,10 +19,12 @@ class CategoriaSyncWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         when (categoriaRepository.postPendingCategorias()) {
             is Resource.Error -> return Result.retry()
+            else -> { }
         }
 
         when (categoriaRepository.postPendingUpdates()) {
             is Resource.Error -> return Result.retry()
+            else -> { }
         }
 
         return when (categoriaRepository.postPendingDeletes()) {
