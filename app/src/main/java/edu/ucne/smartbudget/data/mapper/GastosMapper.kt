@@ -25,20 +25,18 @@ fun Gastos.toEntity(): GastosEntity =
         fecha = fecha,
         descripcion = descripcion,
         categoriaId = categoriaId,
-        usuarioId = usuarioId,
-        isPendingCreate = false,
-        isPendingUpdate = false,
-        isPendingDelete = false
+        usuarioId = usuarioId
     )
 
-fun Gastos.toRequest(categoriaRemoteId: Int, usuarioRemoteId: Int): GastoRequest =
+fun Gastos.toRequest(): GastoRequest =
     GastoRequest(
         descripcion = descripcion,
         fecha = fecha,
-        categoriaId = categoriaRemoteId,
+        categoriaId = categoriaId.toInt(),
         monto = monto,
-        usuarioId = usuarioRemoteId
+        usuarioId = usuarioId.toInt()
     )
+
 
 fun GastoResponse.toEntity(
     currentLocalId: String? = null,
@@ -52,10 +50,7 @@ fun GastoResponse.toEntity(
         fecha = fecha,
         descripcion = descripcion,
         categoriaId = categoriaLocalId ?: categoriaId.toString(),
-        usuarioId = usuarioLocalId ?: usuarioId.toString(),
-        isPendingCreate = false,
-        isPendingUpdate = false,
-        isPendingDelete = false
+        usuarioId = usuarioLocalId ?: usuarioId.toString()
     )
 
 fun GastoResponse.toDomain(
