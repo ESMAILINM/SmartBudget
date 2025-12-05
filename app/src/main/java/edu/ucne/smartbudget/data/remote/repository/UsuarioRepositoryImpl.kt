@@ -128,4 +128,13 @@ class UsuarioRepositoryImpl @Inject constructor(
     override fun getUsuarioActual(): Flow<Usuarios?> =
         localDataSource.observeUsuarios()
             .map { list -> list.firstOrNull()?.toDomain() }
+
+    override suspend fun login(username: String, password: String): Resource<Usuarios> {
+        val usuarioEntity = localDataSource.getUsuarioByUsername(username)
+        return if (usuarioEntity != null && usuarioEntity.password == password) {
+            Resource.Success(usuarioEntity.toDomain())
+        } else {
+            Resource.Error("Usuario o contraseña incorrectos")
+        }
+    }
 }
