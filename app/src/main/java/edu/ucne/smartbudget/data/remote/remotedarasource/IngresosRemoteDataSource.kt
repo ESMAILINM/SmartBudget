@@ -48,4 +48,18 @@ class IngresosRemoteDataSource @Inject constructor(
             Resource.Error(e.localizedMessage ?: "Error de red")
         }
     }
+
+    suspend fun getIngreso(id: Int): Resource<IngresoResponse> {
+        return try {
+            val response = api.getIngreso(id)
+            if (response.isSuccessful) {
+                response.body()?.let { Resource.Success(it) }
+                    ?: Resource.Error("Respuesta vacía del servidor")
+            } else {
+                Resource.Error("HTTP ${response.code()} ${response.message()}")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.localizedMessage ?: "Error de red")
+        }
+    }
 }
