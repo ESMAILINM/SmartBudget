@@ -23,4 +23,7 @@ interface UsuarioRepository {
         suspend fun postPendingUpdates(): Resource<Unit>
 
         fun getUsuarioActual(): Flow<Usuarios?>
+
+        suspend fun login(username: String, password: String): Resource<Usuarios>
+
 }
