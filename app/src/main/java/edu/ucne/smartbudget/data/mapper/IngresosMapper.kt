@@ -31,13 +31,13 @@ fun Ingresos.toEntity(): IngresosEntity =
         isPendingDelete = false
     )
 
-fun Ingresos.toRequest(categoriaRemoteId: Int, usuarioRemoteId: Int): IngresoRequest =
+fun Ingresos.toRequest(): IngresoRequest =
     IngresoRequest(
         descripcion = descripcion,
         fecha = fecha,
-        categoriaId = categoriaRemoteId,
+        categoriaId = categoriaId.toInt(),
         monto = monto,
-        usuarioId = usuarioRemoteId
+        usuarioId = usuarioId.toInt()
     )
 
 fun IngresoResponse.toEntity(
