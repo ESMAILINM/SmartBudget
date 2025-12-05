@@ -1,9 +1,10 @@
 package edu.ucne.smartbudget.ui.theme
+
 import androidx.compose.ui.graphics.Color
 
 val primaryLight = Color(0xFF36693D)
 val onPrimaryLight = Color(0xFFFFFFFF)
-val primaryContainerLight = Color(0xFFB8F1B9)
+val primaryContainerLight = Color(0xFFE6F3EA)
 val onPrimaryContainerLight = Color(0xFF1E5128)
 val secondaryLight = Color(0xFF516350)
 val onSecondaryLight = Color(0xFFFFFFFF)
@@ -17,14 +18,14 @@ val errorLight = Color(0xFFBA1A1A)
 val onErrorLight = Color(0xFFFFFFFF)
 val errorContainerLight = Color(0xFFFFDAD6)
 val onErrorContainerLight = Color(0xFF93000A)
-val backgroundLight = Color(0xFFF7FBF2)
+val backgroundLight = Color(0xFFFDFDFD)
 val onBackgroundLight = Color(0xFF181D18)
 val surfaceLight = Color(0xFFF7FBF2)
 val onSurfaceLight = Color(0xFF181D18)
 val surfaceVariantLight = Color(0xFFDEE5D9)
 val onSurfaceVariantLight = Color(0xFF424940)
 val outlineLight = Color(0xFF727970)
-val outlineVariantLight = Color(0xFFC1C9BE)
+val outlineVariantLight = Color(0xFFF1F2F7)
 val scrimLight = Color(0xFF000000)
 val inverseSurfaceLight = Color(0xFF2D322C)
 val inverseOnSurfaceLight = Color(0xFFEEF2E9)
@@ -217,33 +218,9 @@ val surfaceContainerDarkHighContrast = Color(0xFF2D322C)
 val surfaceContainerHighDarkHighContrast = Color(0xFF383D37)
 val surfaceContainerHighestDarkHighContrast = Color(0xFF434842)
 
-val customColor1Light = Color(0xFF556423)
-val onCustomColor1Light = Color(0xFFFFFFFF)
-val customColor1ContainerLight = Color(0xFFD8EB9A)
-val onCustomColor1ContainerLight = Color(0xFF3E4C0C)
 
-val customColor1LightMediumContrast = Color(0xFF2E3B00)
-val onCustomColor1LightMediumContrast = Color(0xFFFFFFFF)
-val customColor1ContainerLightMediumContrast = Color(0xFF647330)
-val onCustomColor1ContainerLightMediumContrast = Color(0xFFFFFFFF)
 
-val customColor1LightHighContrast = Color(0xFF253000)
-val onCustomColor1LightHighContrast = Color(0xFFFFFFFF)
-val customColor1ContainerLightHighContrast = Color(0xFF404F0E)
-val onCustomColor1ContainerLightHighContrast = Color(0xFFFFFFFF)
 
-val customColor1Dark = Color(0xFFBCCE81)
-val onCustomColor1Dark = Color(0xFF293500)
-val customColor1ContainerDark = Color(0xFF3E4C0C)
-val onCustomColor1ContainerDark = Color(0xFFD8EB9A)
 
-val customColor1DarkMediumContrast = Color(0xFFD2E594)
-val onCustomColor1DarkMediumContrast = Color(0xFF202900)
-val customColor1ContainerDarkMediumContrast = Color(0xFF879850)
-val onCustomColor1ContainerDarkMediumContrast = Color(0xFF000000)
 
-val customColor1DarkHighContrast = Color(0xFFE6F9A6)
-val onCustomColor1DarkHighContrast = Color(0xFF000000)
-val customColor1ContainerDarkHighContrast = Color(0xFFB9CB7D)
-val onCustomColor1ContainerDarkHighContrast = Color(0xFF080D00)
 
