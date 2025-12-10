@@ -9,6 +9,11 @@ import javax.inject.Inject
 class IngresosRemoteDataSource @Inject constructor(
     private val api: SmartBudgetApi
 ) {
+
+    companion object {
+        private const val NETWORK_ERROR = "Error de red"
+    }
+
     suspend fun insertIngreso(request: IngresoRequest): Resource<IngresoResponse> {
         return try {
             val response = api.createIngreso(request)
@@ -19,7 +24,7 @@ class IngresosRemoteDataSource @Inject constructor(
                 Resource.Error("HTTP ${response.code()} ${response.message()}")
             }
         } catch (e: Exception) {
-            Resource.Error(e.localizedMessage ?: "Error de red")
+            Resource.Error(e.localizedMessage ?: NETWORK_ERROR)
         }
     }
 
@@ -32,7 +37,7 @@ class IngresosRemoteDataSource @Inject constructor(
                 Resource.Error("HTTP ${response.code()} ${response.message()}")
             }
         } catch (e: Exception) {
-            Resource.Error(e.localizedMessage ?: "Error de red")
+            Resource.Error(e.localizedMessage ?: NETWORK_ERROR)
         }
     }
 
@@ -45,7 +50,7 @@ class IngresosRemoteDataSource @Inject constructor(
                 Resource.Error("HTTP ${response.code()} ${response.message()}")
             }
         } catch (e: Exception) {
-            Resource.Error(e.localizedMessage ?: "Error de red")
+            Resource.Error(e.localizedMessage ?: NETWORK_ERROR)
         }
     }
 
@@ -59,7 +64,7 @@ class IngresosRemoteDataSource @Inject constructor(
                 Resource.Error("HTTP ${response.code()} ${response.message()}")
             }
         } catch (e: Exception) {
-            Resource.Error(e.localizedMessage ?: "Error de red")
+            Resource.Error(e.localizedMessage ?: NETWORK_ERROR)
         }
     }
 }
