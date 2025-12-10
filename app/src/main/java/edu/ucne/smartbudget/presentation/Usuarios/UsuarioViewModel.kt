@@ -80,6 +80,7 @@ class UsuarioViewModel @Inject constructor(
         try {
             triggerSyncUseCase()
         } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -97,7 +98,6 @@ class UsuarioViewModel @Inject constructor(
     private fun login(userName: String, password: String) = viewModelScope.launch {
         val nameResult = validationAuthUseCase.validateUser(userName)
         val passResult = validationAuthUseCase.validatePassword(password)
-
         val hasError = listOf(nameResult, passResult).any { !it.successful }
 
         if (hasError) {
@@ -148,7 +148,6 @@ class UsuarioViewModel @Inject constructor(
             currentState.userName,
             currentState.usuarios
         )
-
         val hasError = listOf(nameResult, passResult, confirmResult, availabilityResult).any { !it.successful }
 
         if (hasError) {
@@ -206,7 +205,6 @@ class UsuarioViewModel @Inject constructor(
 
     private suspend fun handleSuccessfulSession(user: Usuarios) {
         sessionDataStore.saveUserId(user.usuarioId)
-
         _state.update {
             it.copy(
                 usuarioActual = user,
@@ -236,6 +234,7 @@ class UsuarioViewModel @Inject constructor(
 
     private fun sendRecoveryEmail(context: Context) {
         val emailUsuario = _state.value.recoveryEmail
+
         if (emailUsuario.isBlank()) {
             _state.update { it.copy(userMessage = "Ingresa tu correo para recuperar") }
             return
