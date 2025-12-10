@@ -19,12 +19,12 @@ class GastoSyncWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         when (gastosRepository.postPendingGastos()) {
             is Resource.Error -> return Result.retry()
-            else -> { }
+            else -> Unit
         }
 
         when (gastosRepository.postPendingUpdates()) {
             is Resource.Error -> return Result.retry()
-            else -> { }
+            else -> Unit
         }
 
         return when (gastosRepository.postPendingDeletes()) {
