@@ -26,13 +26,16 @@ class CategoriasRepositoryImpl @Inject constructor(
     override suspend fun upsertCategoria(categorias: Categorias): Resource<Unit> {
         return try {
             val isPendingCreate = categorias.remoteId == null || categorias.isPendingCreate
+
             val updated = if (isPendingCreate) {
                 categorias.copy(isPendingCreate = true, isPendingUpdate = false)
             } else {
                 categorias.copy(isPendingUpdate = true)
             }
+
             localDataSource.upsertCategoria(updated.toEntity())
             Resource.Success(Unit)
+
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Error local")
         }
@@ -53,6 +56,7 @@ class CategoriasRepositoryImpl @Inject constructor(
             }
 
             Resource.Success(Unit)
+
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Error local")
         }
@@ -60,64 +64,87 @@ class CategoriasRepositoryImpl @Inject constructor(
 
     override suspend fun postPendingCategorias(): Resource<Unit> {
         val pending = localDataSource.getPendingCreateCategorias()
+
         for (item in pending) {
             val request = item.toDomain().toRequest()
+
             when (val result = remoteDataSource.createCategoria(request)) {
+
                 is Resource.Success -> {
+                    val remoteData = result.data ?: return Resource.Error("Respuesta remota inválida")
+
                     val synced = item.copy(
-                        remoteId = result.data!!.categoriaId,
+                        remoteId = remoteData.categoriaId,
                         isPendingCreate = false,
                         isPendingUpdate = false
                     )
                     localDataSource.upsertCategoria(synced)
                 }
+
                 is Resource.Error -> {
                     return Resource.Error(result.message ?: "Fallo al crear categoría remota")
-                }else -> {}
+                }
+
+                is Resource.Loading -> Unit
             }
         }
+
         return Resource.Success(Unit)
     }
 
+
     override suspend fun postPendingUpdates(): Resource<Unit> {
         val pending = localDataSource.getPendingUpdate()
+
         for (item in pending) {
             val remoteId = item.remoteId ?: continue
             val request = item.toDomain().toRequest()
+
             when (val result = remoteDataSource.updateCategoria(remoteId, request)) {
                 is Resource.Success -> {
-                    val synced = item.copy(
-                        isPendingUpdate = false,
-                        isPendingCreate = false
-                    )
+                    val synced = item.copy(isPendingUpdate = false, isPendingCreate = false)
                     localDataSource.upsertCategoria(synced)
                 }
                 is Resource.Error -> {
                     return Resource.Error(result.message ?: "Fallo al actualizar categoría remota")
                 }
-                else -> {}
+                is Resource.Loading -> Unit
+
+                is Resource.Error -> {
+                    return Resource.Error(result.message ?: "Fallo al actualizar categoría remota")
+                }
             }
         }
+
         return Resource.Success(Unit)
     }
 
     override suspend fun postPendingDeletes(): Resource<Unit> {
         val pending = localDataSource.getPendingDelete()
+
         for (item in pending) {
-            if (item.remoteId == null) {
+            val remoteId = item.remoteId
+
+            if (remoteId == null) {
                 localDataSource.deleteCategoria(item.categoriaId)
                 continue
             }
-            when (val result = remoteDataSource.deleteCategoria(item.remoteId)) {
-                is Resource.Success -> localDataSource.deleteCategoria(item.categoriaId)
+
+            when (val result = remoteDataSource.deleteCategoria(remoteId)) {
+
+                is Resource.Success -> {
+                    localDataSource.deleteCategoria(item.categoriaId)
+                }
+
                 is Resource.Error -> {
                     if (result.message?.contains("404") == true) {
                         localDataSource.deleteCategoria(item.categoriaId)
                     }
                 }
-                else -> {}
+                is Resource.Loading -> Unit
             }
         }
+
         return Resource.Success(Unit)
     }
 
@@ -135,13 +162,15 @@ class CategoriasRepositoryImpl @Inject constructor(
         val remoteId = id.toIntOrNull() ?: return Resource.Error("No encontrado")
 
         return when (val res = remoteDataSource.getCategoria(remoteId)) {
+
             is Resource.Success -> {
-                res.data?.let {
-                    localDataSource.upsertCategoria(it.toDomain().toEntity())
-                }
-                Resource.Success(res.data?.toDomain())
+                val data = res.data
+                data?.let { localDataSource.upsertCategoria(it.toDomain().toEntity()) }
+                Resource.Success(data?.toDomain())
             }
+
             is Resource.Error -> Resource.Error(res.message ?: "Error remoto")
+
             else -> Resource.Error("Error desconocido")
         }
     }
