@@ -1,22 +1,31 @@
-package edu.ucne.smartbudget.presentation.navegation
+package edu.ucne.smartbudget.presentation.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import edu.ucne.smartbudget.presentation.dashboardScreen.HomeScreen
-import edu.ucne.smartbudget.presentation.auth.AuthScreen
 import edu.ucne.smartbudget.presentation.Usuarios.UsuarioViewModel
+import edu.ucne.smartbudget.presentation.auth.AuthScreen
 
 @Composable
 fun SmartBudgetNavHost(
     navController: NavHostController,
     usuarioViewModel: UsuarioViewModel = hiltViewModel()
 ) {
-    val state by usuarioViewModel.state.collectAsState()
+    val state by usuarioViewModel.state.collectAsStateWithLifecycle()
+
+    LaunchedEffect(state.usuarioActual) {
+        val user = state.usuarioActual
+        if (user != null) {
+            navController.navigate(Screen.MainAppWrapper.route) {
+                popUpTo(Screen.Login.route) { inclusive = true }
+            }
+        }
+    }
 
     NavHost(
         navController = navController,
@@ -28,7 +37,7 @@ fun SmartBudgetNavHost(
                 state = state,
                 onEvent = usuarioViewModel::onEvent,
                 onLoginExitoso = {
-                    navController.navigate(Screen.Home.route) {
+                    navController.navigate(Screen.MainAppWrapper.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
                     usuarioViewModel.limpiarSuccessLogin()
@@ -36,17 +45,24 @@ fun SmartBudgetNavHost(
             )
         }
 
-        composable(Screen.Home.route) {
-            HomeScreen(
-                usuarioActual = state.usuarioActual,
-                usuarios = state.usuarios,
-                onLogout = {
-                    usuarioViewModel.logout()
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Home.route) { inclusive = true }
-                    }
-                }
-            )
+        composable(Screen.MainAppWrapper.route) {
+            val user = state.usuarioActual
+            val currentUserId = when {
+                user?.remoteId != null && user.remoteId != 0 -> user.remoteId.toString()
+                else -> user?.usuarioId ?: ""
+            }
+
+            if (currentUserId.isNotEmpty()) {
+                MainAppScreen(
+                    onLogout = {
+                        usuarioViewModel.logout()
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(Screen.MainAppWrapper.route) { inclusive = true }
+                        }
+                    },
+                    currentUserId = currentUserId
+                )
+            }
         }
     }
 }
