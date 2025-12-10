@@ -12,7 +12,9 @@ fun CategoriasEntity.toDomain(): Categorias =
         remoteId = remoteId,
         nombre = nombre,
         tipoId = tipoId,
-
+        isPendingCreate = isPendingCreate,
+        isPendingUpdate = isPendingUpdate,
+        isPendingDelete = isPendingDelete
     )
 
 fun Categorias.toEntity(): CategoriasEntity =
@@ -21,9 +23,9 @@ fun Categorias.toEntity(): CategoriasEntity =
         remoteId = remoteId,
         nombre = nombre,
         tipoId = tipoId,
-        isPendingCreate = false,
-        isPendingUpdate = false,
-        isPendingDelete = false
+        isPendingCreate = isPendingCreate,
+        isPendingUpdate = isPendingUpdate,
+        isPendingDelete = isPendingDelete
     )
 
 fun Categorias.toRequest(): CategoriaRequest =
@@ -48,5 +50,8 @@ fun CategoriaResponse.toDomain(currentLocalId: String? = null): Categorias =
         categoriaId = currentLocalId ?: UUID.randomUUID().toString(),
         remoteId = categoriaId,
         nombre = nombre,
-        tipoId = tipoId
+        tipoId = tipoId,
+        isPendingCreate = false,
+        isPendingUpdate = false,
+        isPendingDelete = false
     )
