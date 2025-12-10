@@ -36,7 +36,6 @@ class UsuarioRepositoryImpl @Inject constructor(
         return Resource.Success(pending)
     }
 
-
     override suspend fun updateUsuario(usuario: Usuarios): Resource<Unit> {
         val updated = if (usuario.remoteId == null) {
             usuario.copy(isPendingCreate = true, isPendingUpdate = false)
@@ -76,8 +75,7 @@ class UsuarioRepositoryImpl @Inject constructor(
                     )
                     localDataSource.upsertUsuario(synced)
                 }
-                is Resource.Error -> continue
-                is Resource.Loading -> {}
+                else -> continue
             }
         }
 
@@ -92,25 +90,21 @@ class UsuarioRepositoryImpl @Inject constructor(
             val request = item.toDomain().toRequest()
 
             when (val result = remoteDataSource.updateUsuario(remoteId, request)) {
-
                 is Resource.Success -> {
                     val synced = item.copy(
                         isPendingUpdate = false
                     )
                     localDataSource.upsertUsuario(synced)
                 }
-
                 is Resource.Error -> {
                     return Resource.Error(result.message ?: "Error desconocido")
                 }
-
-                is Resource.Loading -> { }
+                is Resource.Loading -> continue
             }
         }
 
         return Resource.Success(Unit)
     }
-
 
     override suspend fun postPendingDeletes(): Resource<Unit> {
         val pending = localDataSource.getPendingDelete()
@@ -123,13 +117,11 @@ class UsuarioRepositoryImpl @Inject constructor(
 
             when (val result = remoteDataSource.deleteUsuario(item.remoteId)) {
                 is Resource.Success -> localDataSource.deleteUsuario(item.usuarioId)
-
                 is Resource.Error -> {
                     if (result.message?.contains("404") == true)
                         localDataSource.deleteUsuario(item.usuarioId)
                 }
-
-                else -> {}
+                else -> continue
             }
         }
 
@@ -147,11 +139,13 @@ class UsuarioRepositoryImpl @Inject constructor(
         if (local != null) return Resource.Success(local)
 
         val remoteId = id.toIntOrNull() ?: return Resource.Error("No encontrado")
+
         return when (val res = remoteDataSource.getUsuario(remoteId)) {
             is Resource.Success -> {
                 val remote = res.data ?: return Resource.Error("Respuesta vacía del servidor")
 
                 val existingLocal = localDataSource.getUsuarioByRemoteId(remote.usuarioId)
+
                 if (existingLocal != null) {
                     val updatedEntity = remote.toEntity(existingLocal.usuarioId)
                     localDataSource.upsertUsuario(updatedEntity)
@@ -168,13 +162,13 @@ class UsuarioRepositoryImpl @Inject constructor(
         }
     }
 
-
     override fun getUsuarioActual(): Flow<Usuarios?> =
         localDataSource.observeUsuarios()
             .map { list -> list.firstOrNull()?.toDomain() }
 
     override suspend fun login(username: String, password: String): Resource<Usuarios> {
         val usuarioEntity = localDataSource.getUsuarioByUsername(username)
+
         return if (usuarioEntity != null && usuarioEntity.password == password) {
             Resource.Success(usuarioEntity.toDomain())
         } else {
