@@ -1,6 +1,8 @@
 package edu.ucne.smartbudget.presentation.reporte
 
 import edu.ucne.smartbudget.domain.model.Categorias
+import edu.ucne.smartbudget.presentation.reporte.items.CategoryProgress
+import edu.ucne.smartbudget.presentation.reporte.items.IngresoVsGastoData
 
 data class ReporteUiState(
     val isLoading: Boolean = false,
