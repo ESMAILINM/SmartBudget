@@ -1,4 +1,4 @@
-package edu.ucne.smartbudget.presentation.dashboardScreen.components
+package edu.ucne.smartbudget.presentation.dashboardScreen.components.items
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
