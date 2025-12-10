@@ -40,7 +40,6 @@ class GastosRepositoryImpl @Inject constructor(
         return try {
             val usuario = usuarioDao.getUsuario(pending.usuarioId)
             val remoteUser = usuario?.remoteId ?: return Resource.Success(pending)
-
             val categoria = categoriaDao.getCategoria(pending.categoriaId)
             val remoteCat = categoria?.remoteId ?: return Resource.Success(pending)
 
@@ -63,6 +62,7 @@ class GastosRepositoryImpl @Inject constructor(
             } else {
                 Resource.Success(pending)
             }
+
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Error insertando gasto")
         }
@@ -87,11 +87,13 @@ class GastosRepositoryImpl @Inject constructor(
             )
 
             val res = remote.updateGasto(remoteId, req)
+
             if (res is Resource.Success) {
                 dao.upsertGasto(pending.copy(isPendingUpdate = false).toEntity())
             }
 
             Resource.Success(Unit)
+
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Error actualizando gasto")
         }
@@ -100,7 +102,6 @@ class GastosRepositoryImpl @Inject constructor(
     override suspend fun deleteGasto(id: String): Resource<Unit> {
         val local = dao.getGasto(id) ?: return Resource.Error("No existe")
         val remoteId = local.remoteId
-
         dao.upsertGasto(local.copy(isPendingDelete = true))
 
         return try {
@@ -110,11 +111,13 @@ class GastosRepositoryImpl @Inject constructor(
             }
 
             val res = remote.deleteGasto(remoteId)
+
             if (res is Resource.Success) {
                 dao.deleteGasto(id)
             }
 
             Resource.Success(Unit)
+
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Error eliminando gasto")
         }
@@ -137,6 +140,7 @@ class GastosRepositoryImpl @Inject constructor(
                 )
 
                 val res = remote.createGasto(req)
+
                 if (res is Resource.Success && res.data != null) {
                     val updated = localEntity.copy(
                         remoteId = res.data.gastoId,
@@ -144,7 +148,9 @@ class GastosRepositoryImpl @Inject constructor(
                     )
                     dao.upsertGasto(updated)
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
 
         return Resource.Success(Unit)
@@ -169,10 +175,13 @@ class GastosRepositoryImpl @Inject constructor(
                 )
 
                 val res = remote.updateGasto(remoteId, req)
+
                 if (res is Resource.Success) {
                     dao.upsertGasto(localEntity.copy(isPendingUpdate = false))
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
 
         return Resource.Success(Unit)
@@ -185,9 +194,12 @@ class GastosRepositoryImpl @Inject constructor(
             try {
                 gasto.remoteId?.let { remote.deleteGasto(it) }
                 dao.deleteGasto(gasto.gastoId)
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
 
         return Resource.Success(Unit)
     }
+
 }
