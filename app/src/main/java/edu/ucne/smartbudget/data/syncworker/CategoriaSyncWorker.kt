@@ -17,19 +17,22 @@ class CategoriaSyncWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
-        when (categoriaRepository.postPendingCategorias()) {
+        when (val create = categoriaRepository.postPendingCategorias()) {
             is Resource.Error -> return Result.retry()
-            else -> { }
+            is Resource.Success -> { }
+            else -> return Result.retry()
         }
 
-        when (categoriaRepository.postPendingUpdates()) {
+        when (val update = categoriaRepository.postPendingUpdates()) {
             is Resource.Error -> return Result.retry()
-            else -> { }
+            is Resource.Success -> { }
+            else -> return Result.retry()
         }
 
-        return when (categoriaRepository.postPendingDeletes()) {
+        return when (val delete = categoriaRepository.postPendingDeletes()) {
+            is Resource.Success -> Result.success()
             is Resource.Error -> Result.retry()
-            else -> Result.success()
+            else -> Result.retry()
         }
     }
 }
