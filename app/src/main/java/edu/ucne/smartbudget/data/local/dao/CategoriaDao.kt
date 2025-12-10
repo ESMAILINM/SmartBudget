@@ -15,6 +15,9 @@ interface CategoriaDao {
     @Query("SELECT * FROM categorias WHERE categoriaId = :id")
     suspend fun getCategoria(id: String): CategoriasEntity?
 
+    @Query("SELECT * FROM categorias WHERE remoteId = :id")
+    suspend fun getCategoriaByRemote(id: Int): CategoriasEntity?
+
     @Upsert
     suspend fun upsertCategoria(categoria: CategoriasEntity)
 
