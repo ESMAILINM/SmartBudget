@@ -9,6 +9,11 @@ import javax.inject.Inject
 class MetasRemoteDataSource @Inject constructor(
     private val api: SmartBudgetApi
 ) {
+
+    companion object {
+        private const val NETWORK_ERROR = "Error de red"
+    }
+
     suspend fun insertMeta(request: MetaRequest): Resource<MetaResponse> {
         return try {
             val response = api.createMeta(request)
@@ -19,7 +24,7 @@ class MetasRemoteDataSource @Inject constructor(
                 Resource.Error("HTTP ${response.code()} ${response.message()}")
             }
         } catch (e: Exception) {
-            Resource.Error(e.localizedMessage ?: "Error de red")
+            Resource.Error(e.localizedMessage ?: NETWORK_ERROR)
         }
     }
 
@@ -32,7 +37,7 @@ class MetasRemoteDataSource @Inject constructor(
                 Resource.Error("HTTP ${response.code()} ${response.message()}")
             }
         } catch (e: Exception) {
-            Resource.Error(e.localizedMessage ?: "Error de red")
+            Resource.Error(e.localizedMessage ?: NETWORK_ERROR)
         }
     }
 
@@ -45,7 +50,7 @@ class MetasRemoteDataSource @Inject constructor(
                 Resource.Error("HTTP ${response.code()} ${response.message()}")
             }
         } catch (e: Exception) {
-            Resource.Error(e.localizedMessage ?: "Error de red")
+            Resource.Error(e.localizedMessage ?: NETWORK_ERROR)
         }
     }
 }
