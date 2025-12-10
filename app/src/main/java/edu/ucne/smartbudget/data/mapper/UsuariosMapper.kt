@@ -6,14 +6,6 @@ import edu.ucne.smartbudget.data.remote.dto.usuariosdto.UsuarioResponse
 import edu.ucne.smartbudget.domain.model.Usuarios
 import java.util.UUID
 
-fun UsuarioRequest.toDomain(): Usuarios =
-    Usuarios(
-        usuarioId = UUID.randomUUID().toString(),
-        remoteId = null,
-        userName = userName,
-        password = password
-    )
-
 fun Usuarios.toRequest(): UsuarioRequest =
     UsuarioRequest(
         userName = userName,
@@ -40,13 +32,27 @@ fun UsuariosEntity.toDomain(): Usuarios =
         usuarioId = usuarioId,
         remoteId = remoteId,
         userName = userName,
-        password = password
+        password = password,
+        isPendingCreate = isPendingCreate,
+        isPendingUpdate = isPendingUpdate,
+        isPendingDelete = isPendingDelete
     )
 
-fun UsuarioResponse.toDomain(): Usuarios =
+fun UsuarioResponse.toEntity(localUuid: String? = null): UsuariosEntity =
+    UsuariosEntity(
+        usuarioId = localUuid ?: UUID.randomUUID().toString(),
+        remoteId = this.usuarioId,
+        userName = this.userName,
+        password = "",
+        isPendingCreate = false,
+        isPendingUpdate = false,
+        isPendingDelete = false
+    )
+
+fun UsuarioResponse.toDomain(localUuid: String): Usuarios =
     Usuarios(
-        usuarioId = UUID.randomUUID().toString(),
-        remoteId = usuarioId,
-        userName = userName,
+        usuarioId = localUuid,
+        remoteId = this.usuarioId,
+        userName = this.userName,
         password = ""
     )
