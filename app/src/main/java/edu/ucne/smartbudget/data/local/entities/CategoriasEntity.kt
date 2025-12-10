@@ -8,7 +8,7 @@ import java.util.UUID
 data class CategoriasEntity(
     @PrimaryKey val categoriaId: String = UUID.randomUUID().toString(),
     val remoteId: Int? = null,
-    val nombre: String = "",
+    val nombre: String,
     val tipoId: Int,
     val isPendingCreate: Boolean = false,
     val isPendingUpdate: Boolean = false,
