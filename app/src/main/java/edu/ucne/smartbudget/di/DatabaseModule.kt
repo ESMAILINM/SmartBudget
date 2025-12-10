@@ -14,8 +14,6 @@ import edu.ucne.smartbudget.data.local.dao.IngresoDao
 import edu.ucne.smartbudget.data.local.dao.MetasDao
 import edu.ucne.smartbudget.data.local.dao.UsuarioDao
 import edu.ucne.smartbudget.data.local.database.SmartBudgetDatabase
-import edu.ucne.smartbudget.data.repository.DashboardRepositoryImpl
-import edu.ucne.smartbudget.domain.repository.DashboardRepository
 import javax.inject.Singleton
 
 
@@ -31,7 +29,7 @@ object DatabaseModule {
             SmartBudgetDatabase::class.java,
             "smartBudgetDatabase.db"
         )
-            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigration(false)
             .build()
     }
 
