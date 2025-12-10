@@ -35,14 +35,15 @@ class GastosRepositoryImpl @Inject constructor(
             isPendingUpdate = false,
             isPendingDelete = false
         )
+
         dao.upsertGasto(pending.toEntity())
 
-        try {
-            val usuario = usuarioDao.getUsuario(pending.usuarioId) ?: return Resource.Success(pending)
-            val remoteUser = usuario.remoteId ?: return Resource.Success(pending)
+        return try {
+            val usuario = usuarioDao.getUsuario(pending.usuarioId)
+            val remoteUser = usuario?.remoteId ?: return Resource.Success(pending)
 
-            val categoria = categoriaDao.getCategoria(pending.categoriaId) ?: return Resource.Success(pending)
-            val remoteCat = categoria.remoteId ?: return Resource.Success(pending)
+            val categoria = categoriaDao.getCategoria(pending.categoriaId)
+            val remoteCat = categoria?.remoteId ?: return Resource.Success(pending)
 
             val req = pending.toRequest(
                 mappedUsuarioId = remoteUser,
@@ -53,18 +54,22 @@ class GastosRepositoryImpl @Inject constructor(
 
             if (res is Resource.Success && res.data != null) {
                 val serverResponse = res.data
+
                 val syncedEntity = serverResponse.toEntity().copy(
                     gastoId = pending.gastoId,
                     usuarioId = pending.usuarioId,
                     categoriaId = pending.categoriaId,
                     isPendingCreate = false
                 )
-                dao.upsertGasto(syncedEntity)
-                return Resource.Success(syncedEntity.toDomain())
-            }
-        } catch (_: Exception) { }
 
-        return Resource.Success(pending)
+                dao.upsertGasto(syncedEntity)
+                Resource.Success(syncedEntity.toDomain())
+            } else {
+                Resource.Success(pending)
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Error insertando gasto")
+        }
     }
 
     override suspend fun updateGasto(gasto: Gastos): Resource<Unit> {
@@ -73,7 +78,7 @@ class GastosRepositoryImpl @Inject constructor(
 
         val remoteId = gasto.remoteId ?: return Resource.Success(Unit)
 
-        try {
+        return try {
             val usuario = usuarioDao.getUsuario(gasto.usuarioId)
             val remoteUser = usuario?.remoteId ?: return Resource.Success(Unit)
 
@@ -90,9 +95,11 @@ class GastosRepositoryImpl @Inject constructor(
             if (res is Resource.Success) {
                 dao.upsertGasto(pending.copy(isPendingUpdate = false).toEntity())
             }
-        } catch (_: Exception) { }
 
-        return Resource.Success(Unit)
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Error actualizando gasto")
+        }
     }
 
     override suspend fun deleteGasto(id: String): Resource<Unit> {
@@ -101,35 +108,36 @@ class GastosRepositoryImpl @Inject constructor(
 
         dao.upsertGasto(local.copy(isPendingDelete = true))
 
-        if (remoteId == null) {
-            dao.deleteGasto(id)
-            return Resource.Success(Unit)
-        }
+        return try {
+            if (remoteId == null) {
+                dao.deleteGasto(id)
+                return Resource.Success(Unit)
+            }
 
-        try {
             val res = remote.deleteGasto(remoteId)
+
             if (res is Resource.Success) {
                 dao.deleteGasto(id)
             }
-        } catch (_: Exception) { }
 
-        return Resource.Success(Unit)
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Error eliminando gasto")
+        }
     }
 
     override suspend fun postPendingGastos(): Resource<Unit> {
         val pending = dao.getPendingCreateGastos()
 
-        for (localEntity in pending) {
+        pending.forEach { localEntity ->
             try {
                 val usuario = usuarioDao.getUsuario(localEntity.usuarioId)
-                val remoteUser = usuario?.remoteId ?: continue
+                val remoteUser = usuario?.remoteId ?: return@forEach
 
                 val categoria = categoriaDao.getCategoria(localEntity.categoriaId)
-                val remoteCat = categoria?.remoteId ?: continue
+                val remoteCat = categoria?.remoteId ?: return@forEach
 
-                val domain = localEntity.toDomain()
-
-                val req = domain.toRequest(
+                val req = localEntity.toDomain().toRequest(
                     mappedUsuarioId = remoteUser,
                     mappedCategoriaId = remoteCat
                 )
@@ -146,23 +154,24 @@ class GastosRepositoryImpl @Inject constructor(
                 }
             } catch (_: Exception) { }
         }
+
         return Resource.Success(Unit)
     }
 
     override suspend fun postPendingUpdates(): Resource<Unit> {
         val pending = dao.getPendingUpdate()
 
-        for (localEntity in pending) {
-            val remoteId = localEntity.remoteId ?: continue
+        pending.forEach { localEntity ->
+            val remoteId = localEntity.remoteId ?: return@forEach
+
             try {
                 val usuario = usuarioDao.getUsuario(localEntity.usuarioId)
-                val remoteUser = usuario?.remoteId ?: continue
+                val remoteUser = usuario?.remoteId ?: return@forEach
 
                 val categoria = categoriaDao.getCategoria(localEntity.categoriaId)
-                val remoteCat = categoria?.remoteId ?: continue
+                val remoteCat = categoria?.remoteId ?: return@forEach
 
-                val domain = localEntity.toDomain()
-                val req = domain.toRequest(
+                val req = localEntity.toDomain().toRequest(
                     mappedUsuarioId = remoteUser,
                     mappedCategoriaId = remoteCat
                 )
@@ -174,17 +183,20 @@ class GastosRepositoryImpl @Inject constructor(
                 }
             } catch (_: Exception) { }
         }
+
         return Resource.Success(Unit)
     }
 
     override suspend fun postPendingDeletes(): Resource<Unit> {
         val pending = dao.getPendingDelete()
-        for (gasto in pending) {
+
+        pending.forEach { gasto ->
             try {
                 gasto.remoteId?.let { remote.deleteGasto(it) }
                 dao.deleteGasto(gasto.gastoId)
             } catch (_: Exception) { }
         }
+
         return Resource.Success(Unit)
     }
 }
