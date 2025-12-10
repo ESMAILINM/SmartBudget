@@ -1,18 +1,11 @@
 package edu.ucne.smartbudget
 
-import android.Manifest
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.launch
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -40,19 +33,6 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
                     SmartBudgetNavHost(navController = navController)
-                }
-            }
-            @Composable
-            fun RequestNotificationPermission() {
-                val launcher = rememberLauncherForActivityResult(
-                    contract = ActivityResultContracts.RequestPermission(),
-                    onResult = { isGranted ->
-                    }
-                )
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    SideEffect {
-                        launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    }
                 }
             }
         }
