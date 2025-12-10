@@ -109,10 +109,6 @@ class CategoriasRepositoryImpl @Inject constructor(
                     return Resource.Error(result.message ?: "Fallo al actualizar categoría remota")
                 }
                 is Resource.Loading -> Unit
-
-                is Resource.Error -> {
-                    return Resource.Error(result.message ?: "Fallo al actualizar categoría remota")
-                }
             }
         }
 
