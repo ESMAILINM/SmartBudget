@@ -1,10 +1,12 @@
 package edu.ucne.smartbudget.data.remote.repository
 
 import edu.ucne.smartbudget.data.local.dao.GastoDao
-import edu.ucne.smartbudget.data.remote.Resource
+import edu.ucne.smartbudget.data.local.dao.UsuarioDao
+import edu.ucne.smartbudget.data.local.dao.CategoriaDao
 import edu.ucne.smartbudget.data.mapper.toDomain
 import edu.ucne.smartbudget.data.mapper.toEntity
 import edu.ucne.smartbudget.data.mapper.toRequest
+import edu.ucne.smartbudget.data.remote.Resource
 import edu.ucne.smartbudget.data.remote.remotedatasource.GastosRemoteDataSource
 import edu.ucne.smartbudget.domain.model.Gastos
 import edu.ucne.smartbudget.domain.repository.GastosRepository
@@ -13,125 +15,175 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class GastosRepositoryImpl @Inject constructor(
-    private val localDataSource: GastoDao,
-    private val remoteDataSource: GastosRemoteDataSource
+    private val dao: GastoDao,
+    private val usuarioDao: UsuarioDao,
+    private val categoriaDao: CategoriaDao,
+    private val remote: GastosRemoteDataSource
 ) : GastosRepository {
 
     override fun getGastos(usuarioId: String): Flow<List<Gastos>> =
-        localDataSource.observeGastosByUsuario(usuarioId)
-            .map { list ->
-                list.filter { !it.isPendingDelete }.map { it.toDomain() }
-            }
+        dao.observeGastosByUsuario(usuarioId).map { list ->
+            list.map { it.toDomain() }
+        }
 
-    override suspend fun getGasto(id: String): Resource<Gastos?> {
-        val gasto = localDataSource.getGasto(id)?.toDomain()
-        return Resource.Success(gasto)
-    }
+    override suspend fun getGasto(id: String): Resource<Gastos?> =
+        Resource.Success(dao.getGasto(id)?.toDomain())
 
     override suspend fun insertGasto(gasto: Gastos): Resource<Gastos> {
-        val pending = gasto.toEntity().copy(
+        val pending = gasto.copy(
             isPendingCreate = true,
             isPendingUpdate = false,
             isPendingDelete = false
         )
-        localDataSource.upsertGasto(pending)
-        return Resource.Success(pending.toDomain())
+        dao.upsertGasto(pending.toEntity())
+
+        try {
+            val usuario = usuarioDao.getUsuario(pending.usuarioId) ?: return Resource.Success(pending)
+            val remoteUser = usuario.remoteId ?: return Resource.Success(pending)
+
+            val categoria = categoriaDao.getCategoria(pending.categoriaId) ?: return Resource.Success(pending)
+            val remoteCat = categoria.remoteId ?: return Resource.Success(pending)
+
+            val req = pending.toRequest(
+                mappedUsuarioId = remoteUser,
+                mappedCategoriaId = remoteCat
+            )
+
+            val res = remote.createGasto(req)
+
+            if (res is Resource.Success && res.data != null) {
+                val serverResponse = res.data
+                val syncedEntity = serverResponse.toEntity().copy(
+                    gastoId = pending.gastoId,
+                    usuarioId = pending.usuarioId,
+                    categoriaId = pending.categoriaId,
+                    isPendingCreate = false
+                )
+                dao.upsertGasto(syncedEntity)
+                return Resource.Success(syncedEntity.toDomain())
+            }
+        } catch (_: Exception) { }
+
+        return Resource.Success(pending)
     }
 
     override suspend fun updateGasto(gasto: Gastos): Resource<Unit> {
-        val remoteId = gasto.remoteId
-        val entity = gasto.toEntity()
+        val pending = gasto.copy(isPendingUpdate = true)
+        dao.upsertGasto(pending.toEntity())
 
-        return if (remoteId == null) {
-            val pending = entity.copy(
-                isPendingCreate = true,
-                isPendingUpdate = false,
-                isPendingDelete = false
+        val remoteId = gasto.remoteId ?: return Resource.Success(Unit)
+
+        try {
+            val usuario = usuarioDao.getUsuario(gasto.usuarioId)
+            val remoteUser = usuario?.remoteId ?: return Resource.Success(Unit)
+
+            val categoria = categoriaDao.getCategoria(gasto.categoriaId)
+            val remoteCat = categoria?.remoteId ?: return Resource.Success(Unit)
+
+            val req = pending.toRequest(
+                mappedUsuarioId = remoteUser,
+                mappedCategoriaId = remoteCat
             )
-            localDataSource.upsertGasto(pending)
-            Resource.Success(Unit)
-        } else {
-            val request = gasto.toRequest()
-            when (remoteDataSource.updateGasto(remoteId, request)) {
-                is Resource.Success -> {
-                    localDataSource.upsertGasto(entity.copy(isPendingUpdate = false))
-                    Resource.Success(Unit)
-                }
-                is Resource.Error -> Resource.Error("Error remoto")
-                else -> Resource.Loading()
+
+            val res = remote.updateGasto(remoteId, req)
+
+            if (res is Resource.Success) {
+                dao.upsertGasto(pending.copy(isPendingUpdate = false).toEntity())
             }
-        }
+        } catch (_: Exception) { }
+
+        return Resource.Success(Unit)
     }
 
     override suspend fun deleteGasto(id: String): Resource<Unit> {
-        val entity = localDataSource.getGasto(id) ?: return Resource.Error("No encontrado")
-        val remoteId = entity.remoteId
+        val local = dao.getGasto(id) ?: return Resource.Error("No existe")
+        val remoteId = local.remoteId
 
-        return if (remoteId == null) {
-            localDataSource.deleteGasto(id)
-            Resource.Success(Unit)
-        } else {
-            when (remoteDataSource.deleteGasto(remoteId)) {
-                is Resource.Success -> {
-                    localDataSource.deleteGasto(id)
-                    Resource.Success(Unit)
-                }
-                is Resource.Error -> Resource.Error("Error remoto")
-                else -> Resource.Loading()
-            }
+        dao.upsertGasto(local.copy(isPendingDelete = true))
+
+        if (remoteId == null) {
+            dao.deleteGasto(id)
+            return Resource.Success(Unit)
         }
+
+        try {
+            val res = remote.deleteGasto(remoteId)
+            if (res is Resource.Success) {
+                dao.deleteGasto(id)
+            }
+        } catch (_: Exception) { }
+
+        return Resource.Success(Unit)
     }
 
     override suspend fun postPendingGastos(): Resource<Unit> {
-        val pending = localDataSource.getPendingCreateGastos()
-        for (item in pending) {
-            val request = item.toDomain().toRequest()
-            when (val result = remoteDataSource.createGasto(request)) {
-                is Resource.Success -> {
-                    val synced = item.copy(
-                        remoteId = result.data?.gastoId,
+        val pending = dao.getPendingCreateGastos()
+
+        for (localEntity in pending) {
+            try {
+                val usuario = usuarioDao.getUsuario(localEntity.usuarioId)
+                val remoteUser = usuario?.remoteId ?: continue
+
+                val categoria = categoriaDao.getCategoria(localEntity.categoriaId)
+                val remoteCat = categoria?.remoteId ?: continue
+
+                val domain = localEntity.toDomain()
+
+                val req = domain.toRequest(
+                    mappedUsuarioId = remoteUser,
+                    mappedCategoriaId = remoteCat
+                )
+
+                val res = remote.createGasto(req)
+
+                if (res is Resource.Success && res.data != null) {
+                    val serverResponse = res.data
+                    val updatedEntity = localEntity.copy(
+                        remoteId = serverResponse.gastoId,
                         isPendingCreate = false
                     )
-                    localDataSource.upsertGasto(synced)
+                    dao.upsertGasto(updatedEntity)
                 }
-                is Resource.Error -> return Resource.Error("Falló sincronización")
-                else -> {}
-            }
+            } catch (_: Exception) { }
         }
         return Resource.Success(Unit)
     }
 
     override suspend fun postPendingUpdates(): Resource<Unit> {
-        val pending = localDataSource.getPendingUpdate()
-        for (item in pending) {
-            val remoteId = item.remoteId ?: continue
-            val request = item.toDomain().toRequest()
+        val pending = dao.getPendingUpdate()
 
-            when (remoteDataSource.updateGasto(remoteId, request)) {
-                is Resource.Success ->
-                    localDataSource.upsertGasto(item.copy(isPendingUpdate = false))
-                is Resource.Error -> return Resource.Error("Falló sincronización")
-                else -> {}
-            }
+        for (localEntity in pending) {
+            val remoteId = localEntity.remoteId ?: continue
+            try {
+                val usuario = usuarioDao.getUsuario(localEntity.usuarioId)
+                val remoteUser = usuario?.remoteId ?: continue
+
+                val categoria = categoriaDao.getCategoria(localEntity.categoriaId)
+                val remoteCat = categoria?.remoteId ?: continue
+
+                val domain = localEntity.toDomain()
+                val req = domain.toRequest(
+                    mappedUsuarioId = remoteUser,
+                    mappedCategoriaId = remoteCat
+                )
+
+                val res = remote.updateGasto(remoteId, req)
+
+                if (res is Resource.Success) {
+                    dao.upsertGasto(localEntity.copy(isPendingUpdate = false))
+                }
+            } catch (_: Exception) { }
         }
         return Resource.Success(Unit)
     }
 
     override suspend fun postPendingDeletes(): Resource<Unit> {
-        val pending = localDataSource.getPendingDelete()
-        for (item in pending) {
-            val remoteId = item.remoteId
-
-            if (remoteId == null) {
-                localDataSource.deleteGasto(item.gastoId)
-                continue
-            }
-
-            when (remoteDataSource.deleteGasto(remoteId)) {
-                is Resource.Success -> localDataSource.deleteGasto(item.gastoId)
-                is Resource.Error -> localDataSource.deleteGasto(item.gastoId)
-                else -> {}
-            }
+        val pending = dao.getPendingDelete()
+        for (gasto in pending) {
+            try {
+                gasto.remoteId?.let { remote.deleteGasto(it) }
+                dao.deleteGasto(gasto.gastoId)
+            } catch (_: Exception) { }
         }
         return Resource.Success(Unit)
     }
