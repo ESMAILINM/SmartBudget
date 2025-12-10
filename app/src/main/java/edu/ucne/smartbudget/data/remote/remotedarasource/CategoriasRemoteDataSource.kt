@@ -10,6 +10,10 @@ class CategoriasRemoteDataSource @Inject constructor(
     private val api: SmartBudgetApi
 ) {
 
+    companion object {
+        private const val NETWORK_ERROR = "Error de red"
+    }
+
     suspend fun createCategoria(request: CategoriaRequest): Resource<CategoriaResponse> {
         return try {
             val response = api.createCategoria(request)
@@ -20,7 +24,7 @@ class CategoriasRemoteDataSource @Inject constructor(
                 Resource.Error("HTTP ${response.code()} ${response.message()}")
             }
         } catch (e: Exception) {
-            Resource.Error(e.localizedMessage ?: "Error de red")
+            Resource.Error(e.localizedMessage ?: NETWORK_ERROR)
         }
     }
 
@@ -33,7 +37,7 @@ class CategoriasRemoteDataSource @Inject constructor(
                 Resource.Error("HTTP ${response.code()} ${response.message()}")
             }
         } catch (e: Exception) {
-            Resource.Error(e.localizedMessage ?: "Error de red")
+            Resource.Error(e.localizedMessage ?: NETWORK_ERROR)
         }
     }
 
@@ -46,7 +50,7 @@ class CategoriasRemoteDataSource @Inject constructor(
                 Resource.Error("HTTP ${response.code()} ${response.message()}")
             }
         } catch (e: Exception) {
-            Resource.Error(e.localizedMessage ?: "Error de red")
+            Resource.Error(e.localizedMessage ?: NETWORK_ERROR)
         }
     }
 
@@ -59,7 +63,7 @@ class CategoriasRemoteDataSource @Inject constructor(
                 Resource.Error("HTTP ${response.code()} ${response.message()}")
             }
         } catch (e: Exception) {
-            Resource.Error(e.localizedMessage ?: "Error de red")
+            Resource.Error(e.localizedMessage ?: NETWORK_ERROR)
         }
     }
 }
