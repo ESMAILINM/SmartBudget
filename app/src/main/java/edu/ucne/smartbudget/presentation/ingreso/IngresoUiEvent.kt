@@ -22,4 +22,5 @@ sealed class IngresoUiEvent {
     data class Delete(val id: String) : IngresoUiEvent()
 
     data class Edit(val ingreso: Ingresos) : IngresoUiEvent()
+    object Refresh : IngresoUiEvent()
 }
