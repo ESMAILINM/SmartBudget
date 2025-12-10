@@ -19,12 +19,12 @@ class UsuarioSyncWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         when (usuarioRepository.postPendingUsuarios()) {
             is Resource.Error -> return Result.retry()
-            else -> { }
+            else -> Unit
         }
 
         when (usuarioRepository.postPendingUpdates()) {
             is Resource.Error -> return Result.retry()
-            else -> { }
+            else -> Unit
         }
 
         return when (usuarioRepository.postPendingDeletes()) {
