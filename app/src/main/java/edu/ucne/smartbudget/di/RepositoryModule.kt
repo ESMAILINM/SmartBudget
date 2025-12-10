@@ -16,7 +16,6 @@ import edu.ucne.smartbudget.domain.repository.MetasRepository
 import edu.ucne.smartbudget.domain.repository.UsuarioRepository
 import javax.inject.Singleton
 
-
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
