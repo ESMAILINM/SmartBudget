@@ -1,8 +1,6 @@
 package edu.ucne.smartbudget.presentation.reporte.items
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,7 +23,6 @@ import androidx.compose.runtime.setValue
 @Composable
 fun CategoryExpensesCard(
     state: ReporteUiState,
-    onEvent: (ReporteUiEvent) -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
     val cardBgColor = colors.surfaceVariant.copy(alpha = 0.3f)
