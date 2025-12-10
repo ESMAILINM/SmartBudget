@@ -9,6 +9,11 @@ import javax.inject.Inject
 class UsuariosRemoteDataSource @Inject constructor(
     private val api: SmartBudgetApi
 ) {
+
+    companion object {
+        private const val NETWORK_ERROR = "Error de red"
+    }
+
     suspend fun createUsuario(request: UsuarioRequest): Resource<UsuarioResponse> {
         return try {
             val response = api.createUsuario(request)
@@ -19,7 +24,7 @@ class UsuariosRemoteDataSource @Inject constructor(
                 Resource.Error("HTTP ${response.code()} ${response.message()}")
             }
         } catch (e: Exception) {
-            Resource.Error(e.localizedMessage ?: "Error de red")
+            Resource.Error(e.localizedMessage ?: NETWORK_ERROR)
         }
     }
 
@@ -32,7 +37,7 @@ class UsuariosRemoteDataSource @Inject constructor(
                 Resource.Error("HTTP ${response.code()} ${response.message()}")
             }
         } catch (e: Exception) {
-            Resource.Error(e.localizedMessage ?: "Error de red")
+            Resource.Error(e.localizedMessage ?: NETWORK_ERROR)
         }
     }
 
@@ -45,9 +50,10 @@ class UsuariosRemoteDataSource @Inject constructor(
                 Resource.Error("HTTP ${response.code()} ${response.message()}")
             }
         } catch (e: Exception) {
-            Resource.Error(e.localizedMessage ?: "Error de red")
+            Resource.Error(e.localizedMessage ?: NETWORK_ERROR)
         }
     }
+
     suspend fun getUsuario(id: Int): Resource<UsuarioResponse> {
         return try {
             val response = api.getUsuario(id)
@@ -58,8 +64,7 @@ class UsuariosRemoteDataSource @Inject constructor(
                 Resource.Error("HTTP ${response.code()} ${response.message()}")
             }
         } catch (e: Exception) {
-            Resource.Error(e.localizedMessage ?: "Error de red")
+            Resource.Error(e.localizedMessage ?: NETWORK_ERROR)
         }
     }
-
 }
