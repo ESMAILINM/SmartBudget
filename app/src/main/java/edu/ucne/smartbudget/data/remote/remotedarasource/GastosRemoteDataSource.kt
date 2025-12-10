@@ -9,6 +9,11 @@ import javax.inject.Inject
 class GastosRemoteDataSource @Inject constructor(
     private val api: SmartBudgetApi
 ) {
+
+    companion object {
+        private const val NETWORK_ERROR = "Error de red"
+    }
+
     suspend fun createGasto(request: GastoRequest): Resource<GastoResponse> {
         return try {
             val response = api.createGasto(request)
@@ -19,7 +24,7 @@ class GastosRemoteDataSource @Inject constructor(
                 Resource.Error("HTTP ${response.code()} ${response.message()}")
             }
         } catch (e: Exception) {
-            Resource.Error(e.localizedMessage ?: "Error de red")
+            Resource.Error(e.localizedMessage ?: NETWORK_ERROR)
         }
     }
 
@@ -32,7 +37,7 @@ class GastosRemoteDataSource @Inject constructor(
                 Resource.Error("HTTP ${response.code()} ${response.message()}")
             }
         } catch (e: Exception) {
-            Resource.Error(e.localizedMessage ?: "Error de red")
+            Resource.Error(e.localizedMessage ?: NETWORK_ERROR)
         }
     }
 
@@ -45,7 +50,7 @@ class GastosRemoteDataSource @Inject constructor(
                 Resource.Error("HTTP ${response.code()} ${response.message()}")
             }
         } catch (e: Exception) {
-            Resource.Error(e.localizedMessage ?: "Error de red")
+            Resource.Error(e.localizedMessage ?: NETWORK_ERROR)
         }
     }
 }
