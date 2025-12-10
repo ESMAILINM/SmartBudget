@@ -6,56 +6,67 @@ import edu.ucne.smartbudget.data.remote.dto.imagenesdto.ImagenResponse
 import edu.ucne.smartbudget.domain.model.Imagenes
 import java.util.UUID
 
+// ENTITY -> DOMAIN
 fun ImagenesEntity.toDomain(): Imagenes =
     Imagenes(
         imagenId = imagenId,
         remoteId = remoteId,
         metaId = metaId,
         url = url,
-        localUrl = localUrl
+        localUrl = localUrl.ifBlank { null },
+        isPendingCreate = isPendingCreate,
+        isPendingUpdate = isPendingUpdate,
+        isPendingDelete = isPendingDelete
     )
 
+// DOMAIN -> ENTITY
 fun Imagenes.toEntity(): ImagenesEntity =
     ImagenesEntity(
         imagenId = imagenId,
         remoteId = remoteId,
         metaId = metaId,
         url = url,
-        localUrl = localUrl,
-        isPendingCreate = false,
-        isPendingUpdate = false,
-        isPendingDelete = false
+        localUrl = localUrl ?: "",
+        isPendingCreate = isPendingCreate,
+        isPendingUpdate = isPendingUpdate,
+        isPendingDelete = isPendingDelete
     )
 
-fun Imagenes.toRequest(): ImagenRequest =
+// DOMAIN -> REQUEST (usa el metaId mapeado a Int)
+fun Imagenes.toRequest(mappedMetaId: Int): ImagenRequest =
     ImagenRequest(
-        metaId = metaId.toIntOrNull() ?: 0,
-        url = url
+        metaId = mappedMetaId,
+        url = url.takeIf { it.isNotBlank() } ?: localUrl ?: ""
     )
 
+// RESPONSE -> ENTITY (requiere metaLocalId para no mezclar ids)
 fun ImagenResponse.toEntity(
     currentLocalId: String? = null,
-    metaLocalId: String? = null
+    metaLocalId: String
 ): ImagenesEntity =
     ImagenesEntity(
         imagenId = currentLocalId ?: UUID.randomUUID().toString(),
-        remoteId = imagenId,
-        metaId = metaLocalId ?: metaId.toString(),
-        url = url ?: "",
+        remoteId = this.imagenId,
+        metaId = metaLocalId,
+        url = this.url ?: "",
         localUrl = "",
         isPendingCreate = false,
         isPendingUpdate = false,
         isPendingDelete = false
     )
 
+// RESPONSE -> DOMAIN (requiere metaLocalId)
 fun ImagenResponse.toDomain(
     currentLocalId: String? = null,
-    metaLocalId: String? = null
+    metaLocalId: String
 ): Imagenes =
     Imagenes(
         imagenId = currentLocalId ?: UUID.randomUUID().toString(),
-        remoteId = imagenId,
-        metaId = metaLocalId ?: metaId.toString(),
-        url = url ?: "",
-        localUrl = ""
+        remoteId = this.imagenId,
+        metaId = metaLocalId,
+        url = this.url ?: "",
+        localUrl = null,
+        isPendingCreate = false,
+        isPendingUpdate = false,
+        isPendingDelete = false
     )
