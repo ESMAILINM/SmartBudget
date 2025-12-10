@@ -31,7 +31,6 @@ class NotificationService @Inject constructor(
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 CHANNEL_NAME,
@@ -42,18 +41,17 @@ class NotificationService @Inject constructor(
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
         }
-    }
+
 
     fun showMetaCompletedNotification(metaNombre: String) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ActivityCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                Log.e("NotificationService", "NO TIENES PERMISO DE NOTIFICACIONES.")
-                return
-            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.e("NotificationService", "NO TIENES PERMISO DE NOTIFICACIONES.")
+            return
         }
 
         val notificationManager = NotificationManagerCompat.from(context)
