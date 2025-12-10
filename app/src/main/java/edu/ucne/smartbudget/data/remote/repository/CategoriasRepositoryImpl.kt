@@ -65,12 +65,15 @@ class CategoriasRepositoryImpl @Inject constructor(
             when (val result = remoteDataSource.createCategoria(request)) {
                 is Resource.Success -> {
                     val synced = item.copy(
-                        remoteId = result.data?.categoriaId,
-                        isPendingCreate = false
+                        remoteId = result.data!!.categoriaId,
+                        isPendingCreate = false,
+                        isPendingUpdate = false
                     )
                     localDataSource.upsertCategoria(synced)
                 }
-                else -> {}
+                is Resource.Error -> {
+                    return Resource.Error(result.message ?: "Fallo al crear categoría remota")
+                }else -> {}
             }
         }
         return Resource.Success(Unit)
@@ -81,10 +84,16 @@ class CategoriasRepositoryImpl @Inject constructor(
         for (item in pending) {
             val remoteId = item.remoteId ?: continue
             val request = item.toDomain().toRequest()
-            when (remoteDataSource.updateCategoria(remoteId, request)) {
+            when (val result = remoteDataSource.updateCategoria(remoteId, request)) { 
                 is Resource.Success -> {
-                    val synced = item.copy(isPendingUpdate = false)
+                    val synced = item.copy(
+                        isPendingUpdate = false,
+                        isPendingCreate = false
+                    )
                     localDataSource.upsertCategoria(synced)
+                }
+                is Resource.Error -> {
+                    return Resource.Error(result.message ?: "Fallo al actualizar categoría remota")
                 }
                 else -> {}
             }
