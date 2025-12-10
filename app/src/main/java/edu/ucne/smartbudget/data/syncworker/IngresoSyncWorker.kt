@@ -19,12 +19,12 @@ class IngresoSyncWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         when (ingresoRepository.postPendingIngresos()) {
             is Resource.Error -> return Result.retry()
-            else -> { }
+            else -> Unit
         }
 
         when (ingresoRepository.postPendingUpdates()) {
             is Resource.Error -> return Result.retry()
-            else -> { }
+            else -> Unit
         }
 
         return when (ingresoRepository.postPendingDeletes()) {
