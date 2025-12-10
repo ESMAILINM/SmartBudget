@@ -9,7 +9,7 @@ data class Metas(
     val contribucionMensual: Double,
     val monto: Double,
     val fecha: String,
-    val Imagenes: List<Imagenes>,
+    val imagenes: List<Imagenes>,
     val emoji : String,
     val usuarioId: String,
     val isPendingCreate: Boolean = false,
