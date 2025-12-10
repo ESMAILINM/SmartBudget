@@ -43,6 +43,7 @@ class MetasRepositoryImpl @Inject constructor(
         )
 
         local.upsertMeta(pending.toEntity())
+
         pending.imagenes.forEach { img ->
             imagenesDao.upsertImagen(
                 img.copy(
@@ -78,7 +79,10 @@ class MetasRepositoryImpl @Inject constructor(
 
                 return Resource.Success(syncedDomain)
             }
-        } catch (_: Exception) { }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
 
         return Resource.Success(pending)
     }
@@ -105,7 +109,6 @@ class MetasRepositoryImpl @Inject constructor(
 
             val req = pending.toRequest(remoteUser)
             val res = remote.updateMeta(remoteId, req)
-
             if (res is Resource.Success) {
                 local.upsertMeta(pending.copy(isPendingUpdate = false).toEntity())
                 val imgs = imagenesDao.getImagesByMeta(meta.metaId)
@@ -113,7 +116,8 @@ class MetasRepositoryImpl @Inject constructor(
             } else {
                 local.upsertMeta(pending.copy(isPendingUpdate = true).toEntity())
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.printStackTrace()
             local.upsertMeta(pending.copy(isPendingUpdate = true).toEntity())
         }
 
@@ -139,21 +143,22 @@ class MetasRepositoryImpl @Inject constructor(
                 imagenesDao.deleteImagesByMeta(id)
                 local.deleteMeta(id)
             }
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
 
         return Resource.Success(Unit)
     }
 
     override suspend fun postPendingMetas(): Resource<Unit> {
         val pendingList = local.getPendingCreateMetas()
+
         for (entity in pendingList) {
             try {
                 val imagenes = imagenesDao.getImagesByMeta(entity.metaId).map { it.toDomain() }
                 val domain = entity.toDomain(imagenes)
-
                 val mappedUsuario = usuarioDao.getUsuario(domain.usuarioId)
                 val remoteUsuarioId = mappedUsuario?.remoteId ?: continue
-
                 val req = domain.toRequest(mappedUsuarioId = remoteUsuarioId)
                 val res = remote.insertMeta(req)
 
@@ -172,13 +177,17 @@ class MetasRepositoryImpl @Inject constructor(
                         }
                     }
                 }
-            } catch (_: Exception) { }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
+
         return Resource.Success(Unit)
     }
 
     override suspend fun postPendingUpdates(): Resource<Unit> {
         val pendingList = local.getPendingUpdate()
+
         for (entity in pendingList) {
             val remoteId = entity.remoteId ?: continue
             try {
@@ -187,29 +196,34 @@ class MetasRepositoryImpl @Inject constructor(
 
                 val mappedUsuario = usuarioDao.getUsuario(domain.usuarioId)
                 val remoteUsuarioId = mappedUsuario?.remoteId ?: continue
-
                 val req = domain.toRequest(mappedUsuarioId = remoteUsuarioId)
                 val res = remote.updateMeta(remoteId, req)
-
                 if (res is Resource.Success) {
                     local.upsertMeta(entity.copy(isPendingUpdate = false))
                     val imgs = imagenesDao.getImagesByMeta(entity.metaId)
                     imgs.forEach { if (it.isPendingUpdate) imagenesDao.clearPendingUpdate(it.imagenId) }
                 }
-            } catch (_: Exception) { }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
+
         return Resource.Success(Unit)
     }
 
     override suspend fun postPendingDeletes(): Resource<Unit> {
         val pendingList = local.getPendingDelete()
+
         for (entity in pendingList) {
             try {
                 entity.remoteId?.let { remote.deleteMeta(it) }
                 imagenesDao.deleteImagesByMeta(entity.metaId)
                 local.deleteMeta(entity.metaId)
-            } catch (_: Exception) { }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
+
         return Resource.Success(Unit)
     }
 }
