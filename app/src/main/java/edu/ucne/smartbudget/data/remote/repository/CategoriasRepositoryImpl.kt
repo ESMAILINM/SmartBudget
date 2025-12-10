@@ -84,7 +84,7 @@ class CategoriasRepositoryImpl @Inject constructor(
         for (item in pending) {
             val remoteId = item.remoteId ?: continue
             val request = item.toDomain().toRequest()
-            when (val result = remoteDataSource.updateCategoria(remoteId, request)) { 
+            when (val result = remoteDataSource.updateCategoria(remoteId, request)) {
                 is Resource.Success -> {
                     val synced = item.copy(
                         isPendingUpdate = false,
