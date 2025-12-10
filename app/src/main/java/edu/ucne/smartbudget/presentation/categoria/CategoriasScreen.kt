@@ -8,18 +8,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import edu.ucne.smartbudget.domain.model.Categorias
 import edu.ucne.smartbudget.presentation.categoria.components.AddEditCategoriaDialog
 import edu.ucne.smartbudget.presentation.categoria.components.CategoriaItemRow
+import edu.ucne.smartbudget.presentation.categoria.components.CategoryTabs
 import edu.ucne.smartbudget.ui.components.AppPullRefresh
 
 @OptIn(ExperimentalMaterial3Api::class)
