@@ -11,10 +11,10 @@ import edu.ucne.smartbudget.domain.repository.GastosRepository
 
 @HiltWorker
 class GastoSyncWorker @AssistedInject constructor(
-    @Assisted context: Context,
+    @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val gastosRepository: GastosRepository
-) : CoroutineWorker(context, workerParams) {
+) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
         when (gastosRepository.postPendingGastos()) {
