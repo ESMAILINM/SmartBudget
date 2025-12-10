@@ -2,6 +2,7 @@ package edu.ucne.smartbudget.data.remote.repository
 
 import edu.ucne.smartbudget.data.local.dao.ImagenesDao
 import edu.ucne.smartbudget.data.local.dao.MetasDao
+import edu.ucne.smartbudget.data.local.dao.UsuarioDao
 import edu.ucne.smartbudget.data.mapper.toDomain
 import edu.ucne.smartbudget.data.mapper.toEntity
 import edu.ucne.smartbudget.data.mapper.toRequest
@@ -14,23 +15,24 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class MetasRepositoryImpl @Inject constructor(
-    private val localDataSource: MetasDao,
+    private val local: MetasDao,
     private val imagenesDao: ImagenesDao,
-    private val remoteDataSource: MetasRemoteDataSource,
+    private val remote: MetasRemoteDataSource,
+    private val usuarioDao: UsuarioDao
 ) : MetasRepository {
 
     override fun getMetas(usuarioId: String): Flow<List<Metas>> =
-        localDataSource.observeMetasByUsuario(usuarioId).map { list ->
-            list.map { meta ->
-                val imagenes = imagenesDao.getImagesByMeta(meta.metaId).map { it.toDomain() }
-                meta.toDomain().copy(Imagenes = imagenes)
-            }.filter { !it.isPendingDelete }
+        local.observeMetasByUsuario(usuarioId).map { list ->
+            list.filter { !it.isPendingDelete }.map { meta ->
+                val imgs = imagenesDao.getImagesByMeta(meta.metaId).map { it.toDomain() }
+                meta.toDomain(imgs)
+            }
         }
 
     override suspend fun getMeta(id: String): Resource<Metas?> {
-        val meta = localDataSource.getMeta(id) ?: return Resource.Success(null)
-        val imagenes = imagenesDao.getImagesByMeta(id).map { it.toDomain() }
-        return Resource.Success(meta.toDomain().copy(Imagenes = imagenes))
+        val meta = local.getMeta(id) ?: return Resource.Success(null)
+        val imgs = imagenesDao.getImagesByMeta(id).map { it.toDomain() }
+        return Resource.Success(meta.toDomain(imgs))
     }
 
     override suspend fun insertMeta(meta: Metas): Resource<Metas> {
@@ -40,99 +42,174 @@ class MetasRepositoryImpl @Inject constructor(
             isPendingDelete = false
         )
 
-        localDataSource.upsertMeta(pending.toEntity())
-
-        pending.Imagenes.forEach { img ->
+        local.upsertMeta(pending.toEntity())
+        pending.imagenes.forEach { img ->
             imagenesDao.upsertImagen(
-                img.copy(metaId = pending.metaId, isPendingCreate = true).toEntity()
+                img.copy(
+                    metaId = pending.metaId,
+                    remoteId = null,
+                    isPendingCreate = true
+                ).toEntity()
             )
         }
+
+        try {
+            val usuario = usuarioDao.getUsuario(pending.usuarioId) ?: return Resource.Success(pending)
+            val remoteUser = usuario.remoteId ?: return Resource.Success(pending)
+            val req = pending.toRequest(remoteUser)
+            val res = remote.insertMeta(req)
+
+            if (res is Resource.Success && res.data != null) {
+                val server = res.data
+                val syncedDomain = server.toDomain(currentLocalId = pending.metaId, imagenes = pending.imagenes)
+                local.upsertMeta(syncedDomain.toEntity())
+
+                val pendingImages = imagenesDao.getPendingCreateImagesByMeta(pending.metaId)
+                server.imagenes?.forEach { imgResp ->
+                    val urlToMatch = imgResp.url ?: ""
+                    val localImg = pendingImages.firstOrNull { it.url == urlToMatch || it.localUrl == urlToMatch }
+                    if (localImg != null) {
+                        imagenesDao.updateImagenRemoteId(localImg.imagenId, imgResp.imagenId)
+                    } else {
+                        val newImgEntity = imgResp.toEntity(currentLocalId = null, metaLocalId = pending.metaId)
+                        imagenesDao.upsertImagen(newImgEntity)
+                    }
+                }
+
+                return Resource.Success(syncedDomain)
+            }
+        } catch (_: Exception) { }
 
         return Resource.Success(pending)
     }
 
     override suspend fun updateMeta(meta: Metas): Resource<Unit> {
-        val remoteId = meta.remoteId ?: return Resource.Error("No remoteId")
-        val req = meta.toRequest()
+        val pending = meta.copy(isPendingUpdate = true)
+        local.upsertMeta(pending.toEntity())
 
-        return when (remoteDataSource.updateMeta(remoteId, req)) {
-            is Resource.Success -> {
-                localDataSource.upsertMeta(meta.toEntity())
-                Resource.Success(Unit)
-            }
-            is Resource.Error -> Resource.Error("Falló actualización")
-            else -> Resource.Loading()
+        pending.imagenes.forEach { img ->
+            imagenesDao.upsertImagen(img.copy(metaId = pending.metaId).toEntity())
         }
+
+        val remoteId = meta.remoteId ?: return Resource.Success(Unit)
+
+        try {
+            val usuario = usuarioDao.getUsuario(meta.usuarioId) ?: run {
+                local.upsertMeta(pending.copy(isPendingUpdate = true).toEntity())
+                return Resource.Success(Unit)
+            }
+            val remoteUser = usuario.remoteId ?: run {
+                local.upsertMeta(pending.copy(isPendingUpdate = true).toEntity())
+                return Resource.Success(Unit)
+            }
+
+            val req = pending.toRequest(remoteUser)
+            val res = remote.updateMeta(remoteId, req)
+
+            if (res is Resource.Success) {
+                local.upsertMeta(pending.copy(isPendingUpdate = false).toEntity())
+                val imgs = imagenesDao.getImagesByMeta(meta.metaId)
+                imgs.forEach { if (it.isPendingUpdate) imagenesDao.clearPendingUpdate(it.imagenId) }
+            } else {
+                local.upsertMeta(pending.copy(isPendingUpdate = true).toEntity())
+            }
+        } catch (_: Exception) {
+            local.upsertMeta(pending.copy(isPendingUpdate = true).toEntity())
+        }
+
+        return Resource.Success(Unit)
     }
 
     override suspend fun deleteMeta(id: String): Resource<Unit> {
-        val entity = localDataSource.getMeta(id) ?: return Resource.Error("No encontrada")
-        val remoteId = entity.remoteId ?: return Resource.Error("No remoteId")
+        val entity = local.getMeta(id) ?: return Resource.Error("Meta no encontrada")
+        val remoteId = entity.remoteId
 
-        return when (remoteDataSource.deleteMeta(remoteId)) {
-            is Resource.Success -> {
-                imagenesDao.deleteImagesByMeta(id)
-                localDataSource.deleteMeta(id)
-                Resource.Success(Unit)
-            }
-            is Resource.Error -> Resource.Error("Falló eliminación")
-            else -> Resource.Loading()
+        imagenesDao.markImagesForDelete(id)
+        local.upsertMeta(entity.copy(isPendingDelete = true))
+
+        if (remoteId == null) {
+            imagenesDao.deleteImagesByMeta(id)
+            local.deleteMeta(id)
+            return Resource.Success(Unit)
         }
+
+        try {
+            val res = remote.deleteMeta(remoteId)
+            if (res is Resource.Success) {
+                imagenesDao.deleteImagesByMeta(id)
+                local.deleteMeta(id)
+            }
+        } catch (_: Exception) { }
+
+        return Resource.Success(Unit)
     }
 
     override suspend fun postPendingMetas(): Resource<Unit> {
-        val pending = localDataSource.getPendingCreateMetas()
+        val pendingList = local.getPendingCreateMetas()
+        for (entity in pendingList) {
+            try {
+                val imagenes = imagenesDao.getImagesByMeta(entity.metaId).map { it.toDomain() }
+                val domain = entity.toDomain(imagenes)
 
-        for (meta in pending) {
-            val req = meta.toDomain().toRequest()
+                val mappedUsuario = usuarioDao.getUsuario(domain.usuarioId)
+                val remoteUsuarioId = mappedUsuario?.remoteId ?: continue
 
-            when (val res = remoteDataSource.insertMeta(req)) {
-                is Resource.Success -> {
-                    val synced = meta.copy(
-                        remoteId = res.data?.metaId,
-                        isPendingCreate = false
-                    )
-                    localDataSource.upsertMeta(synced)
+                val req = domain.toRequest(mappedUsuarioId = remoteUsuarioId)
+                val res = remote.insertMeta(req)
+
+                if (res is Resource.Success && res.data != null) {
+                    val server = res.data
+                    local.upsertMeta(entity.copy(remoteId = server.metaId, isPendingCreate = false))
+                    val pendingImages = imagenesDao.getPendingCreateImagesByMeta(entity.metaId)
+                    server.imagenes?.forEach { imgResp ->
+                        val urlToMatch = imgResp.url ?: ""
+                        val localImg = pendingImages.firstOrNull { it.url == urlToMatch || it.localUrl == urlToMatch }
+                        if (localImg != null) {
+                            imagenesDao.updateImagenRemoteId(localImg.imagenId, imgResp.imagenId)
+                        } else {
+                            val newImgEntity = imgResp.toEntity(currentLocalId = null, metaLocalId = entity.metaId)
+                            imagenesDao.upsertImagen(newImgEntity)
+                        }
+                    }
                 }
-                is Resource.Error -> return Resource.Error("Falló sincronización")
-                else -> {}
-            }
+            } catch (_: Exception) { }
         }
         return Resource.Success(Unit)
     }
 
     override suspend fun postPendingUpdates(): Resource<Unit> {
-        val pending = localDataSource.getPendingUpdate()
+        val pendingList = local.getPendingUpdate()
+        for (entity in pendingList) {
+            val remoteId = entity.remoteId ?: continue
+            try {
+                val imagenes = imagenesDao.getImagesByMeta(entity.metaId).map { it.toDomain() }
+                val domain = entity.toDomain(imagenes)
 
-        for (meta in pending) {
-            val remoteId = meta.remoteId ?: continue
-            val req = meta.toDomain().toRequest()
+                val mappedUsuario = usuarioDao.getUsuario(domain.usuarioId)
+                val remoteUsuarioId = mappedUsuario?.remoteId ?: continue
 
-            when (remoteDataSource.updateMeta(remoteId, req)) {
-                is Resource.Success ->
-                    localDataSource.upsertMeta(meta.copy(isPendingUpdate = false))
-                else -> {}
-            }
+                val req = domain.toRequest(mappedUsuarioId = remoteUsuarioId)
+                val res = remote.updateMeta(remoteId, req)
+
+                if (res is Resource.Success) {
+                    local.upsertMeta(entity.copy(isPendingUpdate = false))
+                    val imgs = imagenesDao.getImagesByMeta(entity.metaId)
+                    imgs.forEach { if (it.isPendingUpdate) imagenesDao.clearPendingUpdate(it.imagenId) }
+                }
+            } catch (_: Exception) { }
         }
-
         return Resource.Success(Unit)
     }
 
     override suspend fun postPendingDeletes(): Resource<Unit> {
-        val pending = localDataSource.getPendingDelete()
-
-        for (meta in pending) {
-            val remoteId = meta.remoteId ?: continue
-
-            when (remoteDataSource.deleteMeta(remoteId)) {
-                is Resource.Success -> {
-                    imagenesDao.deleteImagesByMeta(meta.metaId)
-                    localDataSource.deleteMeta(meta.metaId)
-                }
-                else -> {}
-            }
+        val pendingList = local.getPendingDelete()
+        for (entity in pendingList) {
+            try {
+                entity.remoteId?.let { remote.deleteMeta(it) }
+                imagenesDao.deleteImagesByMeta(entity.metaId)
+                local.deleteMeta(entity.metaId)
+            } catch (_: Exception) { }
         }
-
         return Resource.Success(Unit)
     }
 }

@@ -17,5 +17,5 @@ data class MetaUiState(
     val isNew: Boolean = true,
     val deleted: Boolean = false,
     val isRefreshing: Boolean = false,
-    val montoAhorrado : Double = 0.0 
+    val montoAhorrado : Double = 0.0
 )
