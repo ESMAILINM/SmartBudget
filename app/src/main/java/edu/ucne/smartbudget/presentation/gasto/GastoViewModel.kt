@@ -34,8 +34,6 @@ class GastoViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "USD")
 
     private var currentUserId: String = ""
-
-    // Almacenamos el ID que queremos editar aunque los datos no hayan cargado
     private var currentGastoId: String? = null
 
     init {
@@ -77,8 +75,6 @@ class GastoViewModel @Inject constructor(
                             isLoading = false
                         )
                     }
-
-                    // CORRECCIÓN: Si hay un gasto pendiente de editar y ya llegaron los datos, llenamos el form
                     if (currentGastoId != null) {
                         val gastoEncontrado = gastos.find { it.gastoId == currentGastoId }
                         if (gastoEncontrado != null) {
@@ -133,19 +129,13 @@ class GastoViewModel @Inject constructor(
     }
 
     private fun loadGasto(id: String) {
-        // 1. Guardamos el ID inmediatamente
         currentGastoId = id
 
-        // 2. Intentamos buscarlo en la lista actual
         val gasto = _state.value.gastosListOriginal.find { it.gastoId == id }
-
-        // 3. Si existe (la lista ya cargó), rellenamos. Si es null, esperamos a observeLocalData
         if (gasto != null) {
             rellenarFormulario(gasto)
         }
     }
-
-    // Función auxiliar para evitar repetir código
     private fun rellenarFormulario(gasto: Gastos) {
         val catNombre = _state.value.categorias.find { it.categoriaId == gasto.categoriaId }?.nombre
 
@@ -155,8 +145,8 @@ class GastoViewModel @Inject constructor(
                 monto = gasto.monto.toString(),
                 descripcion = gasto.descripcion ?: "",
                 categoriaSeleccionadaId = gasto.categoriaId,
-                categoriaSeleccionadaNombre = catNombre, // Aseguramos que el nombre también se actualice
-                fecha = gasto.fecha ?: ""
+                categoriaSeleccionadaNombre = catNombre,
+                fecha = gasto.fecha
             )
         }
     }
@@ -251,7 +241,6 @@ class GastoViewModel @Inject constructor(
                 categoriaSeleccionadaId = null,
                 categoriaSeleccionadaNombre = null,
                 fecha = "",
-                // isSaved se limpia con delay para permitir navegación
             )
         }
         viewModelScope.launch {
