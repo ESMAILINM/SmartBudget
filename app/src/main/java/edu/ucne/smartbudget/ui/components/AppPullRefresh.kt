@@ -41,7 +41,7 @@ fun AppPullRefresh(
                 state = state,
                 backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 contentColor = MaterialTheme.colorScheme.primary,
-                scale = true 
+                scale = true
             )
         }
     }
