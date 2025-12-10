@@ -6,7 +6,6 @@ import androidx.room.Upsert
 import edu.ucne.smartbudget.data.local.entities.UsuariosEntity
 import kotlinx.coroutines.flow.Flow
 
-
 @Dao
 interface UsuarioDao {
 
@@ -16,8 +15,11 @@ interface UsuarioDao {
     @Query("SELECT * FROM usuarios WHERE usuarioId = :id")
     suspend fun getUsuario(id: String): UsuariosEntity?
 
-    @Query("SELECT * FROM usuarios WHERE username = :username LIMIT 1")
+    @Query("SELECT * FROM usuarios WHERE userName = :username LIMIT 1")
     suspend fun getUsuarioByUsername(username: String): UsuariosEntity?
+
+    @Query("SELECT * FROM usuarios WHERE remoteId = :remoteId LIMIT 1")
+    suspend fun getUsuarioByRemoteId(remoteId: Int): UsuariosEntity?
 
     @Upsert
     suspend fun upsertUsuario(usuario: UsuariosEntity)
@@ -34,4 +36,3 @@ interface UsuarioDao {
     @Query("SELECT * FROM usuarios WHERE isPendingDelete = 1")
     suspend fun getPendingDelete(): List<UsuariosEntity>
 }
-
