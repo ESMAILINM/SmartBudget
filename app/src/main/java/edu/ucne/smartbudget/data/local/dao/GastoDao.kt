@@ -7,7 +7,8 @@ import edu.ucne.smartbudget.data.local.entities.GastosEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-    interface GastoDao {
+interface GastoDao {
+
     @Query("SELECT * FROM gastos WHERE usuarioId = :usuarioId")
     fun observeGastosByUsuario(usuarioId: String): Flow<List<GastosEntity>>
 
