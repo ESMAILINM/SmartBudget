@@ -19,12 +19,12 @@ class MetaSyncWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         when (metasRepository.postPendingMetas()) {
             is Resource.Error -> return Result.retry()
-            else -> { }
+            else -> Unit
         }
 
         when (metasRepository.postPendingUpdates()) {
             is Resource.Error -> return Result.retry()
-            else -> { }
+            else -> Unit
         }
 
         return when (metasRepository.postPendingDeletes()) {
