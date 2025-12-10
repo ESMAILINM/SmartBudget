@@ -18,10 +18,24 @@ class UsuarioRepositoryImpl @Inject constructor(
 ) : UsuarioRepository {
 
     override suspend fun insertUsuario(usuario: Usuarios): Resource<Usuarios> {
-        val pending = usuario.copy(isPendingCreate = true)
-        localDataSource.upsertUsuario(pending.toEntity())
+        val pending = usuario.copy(
+            isPendingCreate = true,
+            isPendingUpdate = false,
+            isPendingDelete = false,
+            remoteId = null
+        )
+
+        localDataSource.upsertUsuario(
+            pending.toEntity(
+                isPendingCreate = true,
+                isPendingUpdate = false,
+                isPendingDelete = false
+            )
+        )
+
         return Resource.Success(pending)
     }
+
 
     override suspend fun updateUsuario(usuario: Usuarios): Resource<Unit> {
         val updated = if (usuario.remoteId == null) {
@@ -49,81 +63,111 @@ class UsuarioRepositoryImpl @Inject constructor(
 
     override suspend fun postPendingUsuarios(): Resource<Unit> {
         val pending = localDataSource.getPendingCreateUsuarios()
+
         for (item in pending) {
             val request = item.toDomain().toRequest()
+
             when (val result = remoteDataSource.createUsuario(request)) {
                 is Resource.Success -> {
+                    val remote = result.data ?: continue
                     val synced = item.copy(
-                        remoteId = result.data?.usuarioId,
+                        remoteId = remote.usuarioId,
                         isPendingCreate = false
                     )
                     localDataSource.upsertUsuario(synced)
                 }
-                else -> {}
+                is Resource.Error -> continue
+                is Resource.Loading -> {}
             }
         }
+
         return Resource.Success(Unit)
     }
 
     override suspend fun postPendingUpdates(): Resource<Unit> {
-        val pending = localDataSource.getPendingUpdate()
-        for (item in pending) {
+        val pendingUpdates = localDataSource.getPendingUpdate()
+
+        for (item in pendingUpdates) {
             val remoteId = item.remoteId ?: continue
             val request = item.toDomain().toRequest()
-            when (remoteDataSource.updateUsuario(remoteId, request)) {
+
+            when (val result = remoteDataSource.updateUsuario(remoteId, request)) {
+
                 is Resource.Success -> {
-                    val synced = item.copy(isPendingUpdate = false)
+                    val synced = item.copy(
+                        isPendingUpdate = false
+                    )
                     localDataSource.upsertUsuario(synced)
                 }
-                else -> {}
+
+                is Resource.Error -> {
+                    return Resource.Error(result.message ?: "Error desconocido")
+                }
+
+                is Resource.Loading -> { }
             }
         }
+
         return Resource.Success(Unit)
     }
 
+
     override suspend fun postPendingDeletes(): Resource<Unit> {
         val pending = localDataSource.getPendingDelete()
+
         for (item in pending) {
             if (item.remoteId == null) {
                 localDataSource.deleteUsuario(item.usuarioId)
                 continue
             }
+
             when (val result = remoteDataSource.deleteUsuario(item.remoteId)) {
                 is Resource.Success -> localDataSource.deleteUsuario(item.usuarioId)
+
                 is Resource.Error -> {
-                    if (result.message?.contains("404") == true) {
+                    if (result.message?.contains("404") == true)
                         localDataSource.deleteUsuario(item.usuarioId)
-                    }
                 }
+
                 else -> {}
             }
         }
+
         return Resource.Success(Unit)
     }
 
     override fun getUsuarios(): Flow<List<Usuarios>> =
-        localDataSource.observeUsuarios()
-            .map { list ->
-                list.map { it.toDomain() }
-                    .filter { !it.isPendingDelete }
-            }
+        localDataSource.observeUsuarios().map { list ->
+            list.map { it.toDomain() }
+                .filter { !it.isPendingDelete }
+        }
 
     override suspend fun getUsuario(id: String): Resource<Usuarios?> {
         val local = localDataSource.getUsuario(id)?.toDomain()
         if (local != null) return Resource.Success(local)
 
         val remoteId = id.toIntOrNull() ?: return Resource.Error("No encontrado")
-
         return when (val res = remoteDataSource.getUsuario(remoteId)) {
             is Resource.Success -> {
-                val domain = res.data?.toDomain()
-                domain?.let { localDataSource.upsertUsuario(it.toEntity()) }
-                Resource.Success(domain)
+                val remote = res.data ?: return Resource.Error("Respuesta vacía del servidor")
+
+                val existingLocal = localDataSource.getUsuarioByRemoteId(remote.usuarioId)
+                if (existingLocal != null) {
+                    val updatedEntity = remote.toEntity(existingLocal.usuarioId)
+                    localDataSource.upsertUsuario(updatedEntity)
+                    Resource.Success(updatedEntity.toDomain())
+                } else {
+                    val uuid = java.util.UUID.randomUUID().toString()
+                    val entity = remote.toEntity(uuid)
+                    localDataSource.upsertUsuario(entity)
+                    Resource.Success(entity.toDomain())
+                }
             }
             is Resource.Error -> Resource.Error(res.message ?: "Error remoto")
             is Resource.Loading -> Resource.Loading()
         }
     }
+
 
     override fun getUsuarioActual(): Flow<Usuarios?> =
         localDataSource.observeUsuarios()
