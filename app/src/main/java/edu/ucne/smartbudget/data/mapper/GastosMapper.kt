@@ -6,64 +6,81 @@ import edu.ucne.smartbudget.data.remote.dto.gastosdto.GastoResponse
 import edu.ucne.smartbudget.domain.model.Gastos
 import java.util.UUID
 
-fun GastosEntity.toDomain(): Gastos =
-    Gastos(
-        gastoId = gastoId,
-        remoteId = remoteId,
+
+fun GastosEntity.toDomain() = Gastos(
+    gastoId = gastoId,
+    remoteId = remoteId,
+    descripcion = descripcion,
+    monto = monto,
+    fecha = fecha,
+    categoriaId = categoriaId,
+    usuarioId = usuarioId,
+    isPendingCreate = isPendingCreate,
+    isPendingUpdate = isPendingUpdate,
+    isPendingDelete = isPendingDelete
+)
+
+fun Gastos.toEntity() = GastosEntity(
+    gastoId = gastoId,
+    remoteId = remoteId,
+    descripcion = descripcion,
+    monto = monto,
+    fecha = fecha,
+    categoriaId = categoriaId,
+    usuarioId = usuarioId,
+    isPendingCreate = isPendingCreate,
+    isPendingUpdate = isPendingUpdate,
+    isPendingDelete = isPendingDelete
+)
+
+fun Gastos.toRequest(
+    mappedUsuarioId: Int,
+    mappedCategoriaId: Int
+): GastoRequest {
+    return GastoRequest(
         monto = monto,
         fecha = fecha,
         descripcion = descripcion,
-        categoriaId = categoriaId,
-        usuarioId = usuarioId
+        usuarioId = mappedUsuarioId,
+        categoriaId = mappedCategoriaId
     )
+}
 
-fun Gastos.toEntity(): GastosEntity =
-    GastosEntity(
-        gastoId = gastoId,
-        remoteId = remoteId,
-        monto = monto,
-        fecha = fecha,
-        descripcion = descripcion,
-        categoriaId = categoriaId,
-        usuarioId = usuarioId
-    )
+fun GastoResponse.toEntity(localId: String) = GastosEntity(
+    gastoId = localId,
+    remoteId = gastoId,
+    descripcion = descripcion,
+    monto = monto,
+    fecha = fecha,
+    categoriaId = "",
+    usuarioId = "",
+    isPendingCreate = false,
+    isPendingUpdate = false,
+    isPendingDelete = false
+)
 
-fun Gastos.toRequest(): GastoRequest =
-    GastoRequest(
-        descripcion = descripcion,
-        fecha = fecha,
-        categoriaId = categoriaId.toInt(),
-        monto = monto,
-        usuarioId = usuarioId.toInt()
-    )
+fun GastoResponse.toEntity() = GastosEntity(
+    gastoId = UUID.randomUUID().toString(),
+    remoteId = gastoId,
+    descripcion = descripcion,
+    monto = monto,
+    fecha = fecha,
+    categoriaId = "",
+    usuarioId = "",
+    isPendingCreate = false,
+    isPendingUpdate = false,
+    isPendingDelete = false
+)
 
-
-fun GastoResponse.toEntity(
-    currentLocalId: String? = null,
-    categoriaLocalId: String? = null,
-    usuarioLocalId: String? = null
-): GastosEntity =
-    GastosEntity(
-        gastoId = currentLocalId ?: UUID.randomUUID().toString(),
-        remoteId = gastoId,
-        monto = monto,
-        fecha = fecha,
-        descripcion = descripcion,
-        categoriaId = categoriaLocalId ?: categoriaId.toString(),
-        usuarioId = usuarioLocalId ?: usuarioId.toString()
-    )
-
-fun GastoResponse.toDomain(
-    currentLocalId: String? = null,
-    categoriaLocalId: String? = null,
-    usuarioLocalId: String? = null
-): Gastos =
-    Gastos(
-        gastoId = currentLocalId ?: UUID.randomUUID().toString(),
-        remoteId = gastoId,
-        monto = monto,
-        fecha = fecha,
-        descripcion = descripcion,
-        categoriaId = categoriaLocalId ?: categoriaId.toString(),
-        usuarioId = usuarioLocalId ?: usuarioId.toString()
-    )
+fun GastoResponse.toDomain() = Gastos(
+    gastoId = UUID.randomUUID().toString(),
+    remoteId = gastoId,
+    descripcion = descripcion,
+    monto = monto,
+    fecha = fecha,
+    categoriaId = "",
+    usuarioId = "",
+    isPendingCreate = false,
+    isPendingUpdate = false,
+    isPendingDelete = false
+)
